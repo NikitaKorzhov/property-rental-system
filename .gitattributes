@@ -1,0 +1,8 @@
+# Ensure shell scripts always keep LF line endings, even when cloned on
+# Windows with core.autocrlf enabled — CRLF breaks the bash entrypoint
+# running inside the Linux db container.
+*.sh text eol=lf
+
+# Windows batch/PowerShell scripts, if any get added later, should keep CRLF.
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

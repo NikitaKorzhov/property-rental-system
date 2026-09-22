@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PropertyRentalSystem.Tests/PropertyRentalSystem.Tests.csproj" />
+  <Project Path="PropertyRentalSystem.Web/PropertyRentalSystem.Web.csproj" />
+</Solution>
