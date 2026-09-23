@@ -1,0 +1,31 @@
+@using PropertyRentalSystem.Web.Models.Domain
+@model PropertyRentalSystem.Web.ViewModels.Account.RegisterViewModel
+<h2>Sign up</h2>
+
+<form asp-action="Register" method="post" class="col-md-4">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" class="form-control" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Role" class="form-label"></label>
+        <select asp-for="Role" class="form-select">
+            <option value="@Roles.Applicant">Applicant</option>
+            <option value="@Roles.PropertyManager">Property Manager</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Sign up</button>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

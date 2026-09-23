@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Models.Domain;
@@ -6,7 +8,15 @@ using PropertyRentalSystem.Web.Models.Domain;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+// Require an authenticated user on every action by default — new controllers must opt in
+// to anonymous access with [AllowAnonymous] rather than accidentally being left public.
+builder.Services.AddControllersWithViews(options =>
+{
+    var requireAuthenticatedUser = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(requireAuthenticatedUser));
+});
 
 // EnableRetryOnFailure smooths over transient connection failures while the SQL Server container is starting up
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -20,7 +30,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
-
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.LoginPath = "/Account/Login";
+    o.AccessDeniedPath = "/Account/AccessDenied";
+});
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

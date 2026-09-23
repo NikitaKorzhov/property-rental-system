@@ -21,7 +21,7 @@ public static class DbInitializer
 
         await context.Database.MigrateAsync();
 
-        string[] roles = { "PropertyManager", "Applicant" };
+        string[] roles = { Roles.PropertyManager, Roles.Applicant };
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
@@ -30,19 +30,19 @@ public static class DbInitializer
             }
         }
 
-        var manager = await EnsureUserAsync(userManager, "manager@radency.com", "PropertyManager");
-        var applicant = await EnsureUserAsync(userManager, "applicant@radency.com", "Applicant");
+        var manager = await EnsureUserAsync(userManager, "manager@radency.com", Roles.PropertyManager);
+        var applicant = await EnsureUserAsync(userManager, "applicant@radency.com", Roles.Applicant);
 
         var managers = new List<ApplicationUser>
         {
             manager,
-            await EnsureUserAsync(userManager, "manager2@radency.com", "PropertyManager")
+            await EnsureUserAsync(userManager, "manager2@radency.com", Roles.PropertyManager)
         };
 
         var applicants = new List<ApplicationUser> { applicant };
         for (var i = 2; i <= 5; i++)
         {
-            applicants.Add(await EnsureUserAsync(userManager, $"applicant{i}@radency.com", "Applicant"));
+            applicants.Add(await EnsureUserAsync(userManager, $"applicant{i}@radency.com", Roles.Applicant));
         }
 
         if (!context.UnitTypes.Any())
