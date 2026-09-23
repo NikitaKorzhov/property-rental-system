@@ -17,7 +17,10 @@ services:
       - mssqldata:/var/opt/mssql
       - ./db-init:/usr/src/app/db-init
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1'"]
+      # Check readiness of the app login/database (DB_USER/DB_NAME), not just sa —
+      # otherwise db is marked healthy as soon as SQL Server starts, before
+      # db-init/entrypoint.sh has created the database/login, causing a race with web's startup.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U \"$$DB_USER\" -P \"$$DB_PASSWORD\" -d \"$$DB_NAME\" -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U \"$$DB_USER\" -P \"$$DB_PASSWORD\" -d \"$$DB_NAME\" -C -Q 'SELECT 1'"]
       interval: 10s
       timeout: 5s
       retries: 10
