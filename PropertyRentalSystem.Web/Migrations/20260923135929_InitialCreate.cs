@@ -226,7 +226,8 @@ namespace PropertyRentalSystem.Web.Migrations
                     Phone = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CurrentAddress = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ReviewComment = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    IsApplicantInfoComplete = table.Column<bool>(type: "bit", nullable: false),
+                    IsResidenceHistoryComplete = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -241,6 +242,35 @@ namespace PropertyRentalSystem.Web.Migrations
                         name: "FK_RentalApplications_Units_UnitId",
                         column: x => x.UnitId,
                         principalTable: "Units",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ApplicationStatusHistories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RentalApplicationId = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ChangedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ChangedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApplicationStatusHistories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApplicationStatusHistories_AspNetUsers_ChangedByUserId",
+                        column: x => x.ChangedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ApplicationStatusHistories_RentalApplications_RentalApplicationId",
+                        column: x => x.RentalApplicationId,
+                        principalTable: "RentalApplications",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -296,6 +326,16 @@ namespace PropertyRentalSystem.Web.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApplicationStatusHistories_ChangedByUserId",
+                table: "ApplicationStatusHistories",
+                column: "ChangedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApplicationStatusHistories_RentalApplicationId",
+                table: "ApplicationStatusHistories",
+                column: "RentalApplicationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -375,6 +415,9 @@ namespace PropertyRentalSystem.Web.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ApplicationStatusHistories");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 

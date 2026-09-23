@@ -17,8 +17,12 @@ public class RentalApplication
     public string Email { get; set; } = string.Empty;
     public string CurrentAddress { get; set; } = string.Empty;
 
-    // Required when Status is Return or Deny
-    public string? ReviewComment { get; set; }
-    
+    // Tracks whether each wizard section was explicitly saved via "Continue" — an empty
+    // ResidenceHistories collection alone can't tell "not visited yet" from "no prior residences".
+    // Submit is only allowed from the Summary once both are true.
+    public bool IsApplicantInfoComplete { get; set; }
+    public bool IsResidenceHistoryComplete { get; set; }
+
     public ICollection<ResidenceHistory> ResidenceHistories { get; set; } = new List<ResidenceHistory>();
+    public ICollection<ApplicationStatusHistory> StatusHistory { get; set; } = new List<ApplicationStatusHistory>();
 }

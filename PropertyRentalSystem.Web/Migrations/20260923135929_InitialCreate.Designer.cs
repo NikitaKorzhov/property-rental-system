@@ -12,7 +12,7 @@ using PropertyRentalSystem.Web.Data;
 namespace PropertyRentalSystem.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260923122316_InitialCreate")]
+    [Migration("20260923135929_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -158,6 +158,39 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationStatusHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RentalApplicationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("RentalApplicationId");
+
+                    b.ToTable("ApplicationStatusHistories");
+                });
+
             modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -297,11 +330,14 @@ namespace PropertyRentalSystem.Web.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsApplicantInfoComplete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsResidenceHistoryComplete")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Phone")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReviewComment")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
@@ -459,6 +495,25 @@ namespace PropertyRentalSystem.Web.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationStatusHistory", b =>
+                {
+                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", "ChangedBy")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.RentalApplication", "RentalApplication")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("RentalApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedBy");
+
+                    b.Navigation("RentalApplication");
+                });
+
             modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Lease", b =>
                 {
                     b.HasOne("PropertyRentalSystem.Web.Models.Domain.RentalApplication", "RentalApplication")
@@ -540,6 +595,8 @@ namespace PropertyRentalSystem.Web.Migrations
             modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.RentalApplication", b =>
                 {
                     b.Navigation("ResidenceHistories");
+
+                    b.Navigation("StatusHistory");
                 });
 
             modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Unit", b =>

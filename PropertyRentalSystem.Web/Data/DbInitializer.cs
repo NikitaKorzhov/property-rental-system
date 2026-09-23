@@ -20,21 +20,19 @@ public static class DbInitializer
             }
         }
 
-        var managerEmail = "manager@radency.com";
-        if (await userManager.FindByEmailAsync(managerEmail) == null)
+        var manager = await EnsureUserAsync(userManager, "manager@radency.com", "PropertyManager");
+        var applicant = await EnsureUserAsync(userManager, "applicant@radency.com", "Applicant");
+
+        var managers = new List<ApplicationUser> { manager };
+        for (var i = 2; i <= 2; i++)
         {
-            var manager = new ApplicationUser { UserName = managerEmail, Email = managerEmail, EmailConfirmed = true };
-            await userManager.CreateAsync(manager, "Password123!");
-            await userManager.AddToRoleAsync(manager, "PropertyManager");
+            managers.Add(await EnsureUserAsync(userManager, $"manager{i}@radency.com", "PropertyManager"));
         }
 
-        var applicantEmail = "applicant@radency.com";
-        var applicantUser = await userManager.FindByEmailAsync(applicantEmail);
-        if (applicantUser == null)
+        var applicants = new List<ApplicationUser> { applicant };
+        for (var i = 2; i <= 5; i++)
         {
-            applicantUser = new ApplicationUser { UserName = applicantEmail, Email = applicantEmail, EmailConfirmed = true };
-            await userManager.CreateAsync(applicantUser, "Password123!");
-            await userManager.AddToRoleAsync(applicantUser, "Applicant");
+            applicants.Add(await EnsureUserAsync(userManager, $"applicant{i}@radency.com", "Applicant"));
         }
 
         if (!context.UnitTypes.Any())
@@ -76,23 +74,131 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
+        // Every application status must be represented, each tied to a distinct unit and
+        // carrying a status-change history (who, when, comment) as required by the spec.
         if (!context.RentalApplications.Any())
         {
-            var firstUnit = await context.Units.FirstAsync();
-            
-            var application = new RentalApplication
+            var units = await context.Units.OrderBy(u => u.Id).Take(6).ToListAsync();
+            var statuses = new[]
             {
-                ApplicantId = applicantUser.Id,
-                UnitId = firstUnit.Id,
-                Status = ApplicationStatus.Submitted,
-                FullName = "Nikita Korzhov",
-                Phone = "+380665044427",
-                Email = applicantEmail,
-                CurrentAddress = "Boryspil, Kyiv Oblast"
+                ApplicationStatus.Draft,
+                ApplicationStatus.Submitted,
+                ApplicationStatus.Returned,
+                ApplicationStatus.Approved,
+                ApplicationStatus.Denied,
+                ApplicationStatus.Withdrawn
             };
 
-            context.RentalApplications.Add(application);
+            var residenceFaker = new Faker<ResidenceHistory>()
+                .RuleFor(r => r.Address, f => f.Address.FullAddress())
+                .RuleFor(r => r.LandlordName, f => f.Name.FullName())
+                .RuleFor(r => r.LandlordPhone, f => f.Phone.PhoneNumber())
+                .RuleFor(r => r.MoveInDate, f => f.Date.Past(3, DateTime.UtcNow.AddYears(-1)))
+                .RuleFor(r => r.MoveOutDate, (f, r) => r.MoveInDate.AddMonths(f.Random.Number(6, 24)));
+
+            var infoFaker = new Faker();
+
+            for (var i = 0; i < statuses.Length; i++)
+            {
+                var status = statuses[i];
+                var unit = units[i];
+                var applicantUser = applicants[i % applicants.Count];
+                var reviewer = managers[i % managers.Count];
+                var submittedAt = DateTime.UtcNow.AddDays(-10);
+
+                var application = new RentalApplication
+                {
+                    ApplicantId = applicantUser.Id,
+                    UnitId = unit.Id,
+                    Status = status,
+                    FullName = infoFaker.Name.FullName(),
+                    Phone = infoFaker.Phone.PhoneNumber(),
+                    Email = applicantUser.Email!,
+                    CurrentAddress = infoFaker.Address.FullAddress(),
+                    IsApplicantInfoComplete = true,
+                    IsResidenceHistoryComplete = status != ApplicationStatus.Draft
+                };
+
+                application.StatusHistory.Add(new ApplicationStatusHistory
+                {
+                    Status = ApplicationStatus.Draft,
+                    ChangedBy = applicantUser,
+                    ChangedAt = submittedAt.AddDays(-2)
+                });
+
+                if (status != ApplicationStatus.Draft)
+                {
+                    application.ResidenceHistories.Add(residenceFaker.Generate());
+                    application.StatusHistory.Add(new ApplicationStatusHistory
+                    {
+                        Status = ApplicationStatus.Submitted,
+                        ChangedBy = applicantUser,
+                        ChangedAt = submittedAt
+                    });
+                }
+
+                switch (status)
+                {
+                    case ApplicationStatus.Returned:
+                        application.StatusHistory.Add(new ApplicationStatusHistory
+                        {
+                            Status = ApplicationStatus.Returned,
+                            ChangedBy = reviewer,
+                            ChangedAt = submittedAt.AddDays(2),
+                            Comment = "Please provide complete residence history for the last 2 years."
+                        });
+                        break;
+                    case ApplicationStatus.Approved:
+                        application.StatusHistory.Add(new ApplicationStatusHistory
+                        {
+                            Status = ApplicationStatus.Approved,
+                            ChangedBy = reviewer,
+                            ChangedAt = submittedAt.AddDays(2),
+                            Comment = "Application meets all criteria."
+                        });
+                        context.Leases.Add(new Lease
+                        {
+                            Unit = unit,
+                            RentalApplication = application,
+                            StartDate = DateTime.UtcNow.Date,
+                            EndDate = DateTime.UtcNow.Date.AddMonths(12)
+                        });
+                        break;
+                    case ApplicationStatus.Denied:
+                        application.StatusHistory.Add(new ApplicationStatusHistory
+                        {
+                            Status = ApplicationStatus.Denied,
+                            ChangedBy = reviewer,
+                            ChangedAt = submittedAt.AddDays(2),
+                            Comment = "Income does not meet the minimum requirement for this unit."
+                        });
+                        break;
+                    case ApplicationStatus.Withdrawn:
+                        application.StatusHistory.Add(new ApplicationStatusHistory
+                        {
+                            Status = ApplicationStatus.Withdrawn,
+                            ChangedBy = applicantUser,
+                            ChangedAt = submittedAt.AddDays(1)
+                        });
+                        break;
+                }
+
+                context.RentalApplications.Add(application);
+            }
+
             await context.SaveChangesAsync();
         }
+    }
+
+    private static async Task<ApplicationUser> EnsureUserAsync(UserManager<ApplicationUser> userManager, string email, string role)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+            await userManager.CreateAsync(user, "Password123!");
+            await userManager.AddToRoleAsync(user, role);
+        }
+        return user;
     }
 }
