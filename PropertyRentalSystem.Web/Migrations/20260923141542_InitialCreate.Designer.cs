@@ -12,7 +12,7 @@ using PropertyRentalSystem.Web.Data;
 namespace PropertyRentalSystem.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260923135929_InitialCreate")]
+    [Migration("20260923141542_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -278,7 +278,8 @@ namespace PropertyRentalSystem.Web.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RentalApplicationId");
+                    b.HasIndex("RentalApplicationId")
+                        .IsUnique();
 
                     b.HasIndex("UnitId");
 
@@ -410,16 +411,17 @@ namespace PropertyRentalSystem.Web.Migrations
 
                     b.Property<string>("UnitNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("UnitTypeId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PropertyId");
-
                     b.HasIndex("UnitTypeId");
+
+                    b.HasIndex("PropertyId", "UnitNumber")
+                        .IsUnique();
 
                     b.ToTable("Units");
                 });
@@ -517,8 +519,8 @@ namespace PropertyRentalSystem.Web.Migrations
             modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Lease", b =>
                 {
                     b.HasOne("PropertyRentalSystem.Web.Models.Domain.RentalApplication", "RentalApplication")
-                        .WithMany()
-                        .HasForeignKey("RentalApplicationId")
+                        .WithOne("Lease")
+                        .HasForeignKey("PropertyRentalSystem.Web.Models.Domain.Lease", "RentalApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -538,13 +540,13 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", "Applicant")
                         .WithMany("Applications")
                         .HasForeignKey("ApplicantId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("PropertyRentalSystem.Web.Models.Domain.Unit", "Unit")
                         .WithMany("Applications")
                         .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Applicant");
@@ -568,13 +570,13 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.HasOne("PropertyRentalSystem.Web.Models.Domain.Property", "Property")
                         .WithMany("Units")
                         .HasForeignKey("PropertyId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("PropertyRentalSystem.Web.Models.Domain.UnitType", "UnitType")
                         .WithMany("Units")
                         .HasForeignKey("UnitTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Property");
@@ -594,6 +596,8 @@ namespace PropertyRentalSystem.Web.Migrations
 
             modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.RentalApplication", b =>
                 {
+                    b.Navigation("Lease");
+
                     b.Navigation("ResidenceHistories");
 
                     b.Navigation("StatusHistory");

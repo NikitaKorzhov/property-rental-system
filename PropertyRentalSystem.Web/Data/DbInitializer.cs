@@ -7,8 +7,18 @@ namespace PropertyRentalSystem.Web.Data;
 
 public static class DbInitializer
 {
+    private static readonly Dictionary<string, int> BedroomsByUnitTypeName = new()
+    {
+        ["Studio"] = 0,
+        ["1-Bedroom"] = 1,
+        ["2-Bedroom"] = 2
+    };
+
     public static async Task SeedAsync(ApplicationDbContext context, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
     {
+        // Deterministic seed data so demos/recordings are reproducible across clean-DB restarts.
+        Randomizer.Seed = new Random(42);
+
         await context.Database.MigrateAsync();
 
         string[] roles = { "PropertyManager", "Applicant" };
@@ -23,11 +33,11 @@ public static class DbInitializer
         var manager = await EnsureUserAsync(userManager, "manager@radency.com", "PropertyManager");
         var applicant = await EnsureUserAsync(userManager, "applicant@radency.com", "Applicant");
 
-        var managers = new List<ApplicationUser> { manager };
-        for (var i = 2; i <= 2; i++)
+        var managers = new List<ApplicationUser>
         {
-            managers.Add(await EnsureUserAsync(userManager, $"manager{i}@radency.com", "PropertyManager"));
-        }
+            manager,
+            await EnsureUserAsync(userManager, "manager2@radency.com", "PropertyManager")
+        };
 
         var applicants = new List<ApplicationUser> { applicant };
         for (var i = 2; i <= 5; i++)
@@ -57,19 +67,32 @@ public static class DbInitializer
             context.Properties.AddRange(properties);
             await context.SaveChangesAsync();
 
-            var unitTypeIds = context.UnitTypes.Where(ut => ut.IsActive).Select(ut => ut.Id).ToList();
+            var allUnitTypes = await context.UnitTypes.ToListAsync();
+            var activeUnitTypeIds = allUnitTypes.Where(t => t.IsActive).Select(t => t.Id).ToList();
+            var inactiveUnitTypeIds = allUnitTypes.Where(t => !t.IsActive).Select(t => t.Id).ToList();
+            var bedroomsByTypeId = allUnitTypes.ToDictionary(t => t.Id, t => BedroomsByUnitTypeName.GetValueOrDefault(t.Name, 1));
 
-            foreach (var prop in properties)
+            var rentFaker = new Faker();
+            for (var propertyIndex = 0; propertyIndex < properties.Count; propertyIndex++)
             {
-                var unitFaker = new Faker<Unit>()
-                    .RuleFor(u => u.UnitNumber, f => f.Random.AlphaNumeric(3).ToUpper())
-                    .RuleFor(u => u.Bedrooms, f => f.Random.Number(1, 3))
-                    .RuleFor(u => u.MonthlyRent, f => f.Random.Decimal(400, 1500))
-                    .RuleFor(u => u.PropertyId, _ => prop.Id)
-                    .RuleFor(u => u.UnitTypeId, f => f.PickRandom(unitTypeIds));
+                for (var unitIndex = 0; unitIndex < 3; unitIndex++)
+                {
+                    // Assign the inactive "2-Bedroom" type to one unit each on the first two
+                    // properties, so the "inactive type still shows on units that already use
+                    // it, but can't be picked for others" rule has real data to demonstrate.
+                    var unitTypeId = propertyIndex < 2 && unitIndex == 0 && inactiveUnitTypeIds.Count > 0
+                        ? inactiveUnitTypeIds[0]
+                        : rentFaker.PickRandom(activeUnitTypeIds);
 
-                var units = unitFaker.Generate(3);
-                context.Units.AddRange(units);
+                    context.Units.Add(new Unit
+                    {
+                        UnitNumber = (101 + unitIndex).ToString(),
+                        Bedrooms = bedroomsByTypeId[unitTypeId],
+                        MonthlyRent = Math.Round(rentFaker.Random.Decimal(400, 1500) / 50m) * 50m,
+                        PropertyId = properties[propertyIndex].Id,
+                        UnitTypeId = unitTypeId
+                    });
+                }
             }
             await context.SaveChangesAsync();
         }
@@ -78,7 +101,7 @@ public static class DbInitializer
         // carrying a status-change history (who, when, comment) as required by the spec.
         if (!context.RentalApplications.Any())
         {
-            var units = await context.Units.OrderBy(u => u.Id).Take(6).ToListAsync();
+            var units = await context.Units.OrderBy(u => u.Id).ToListAsync();
             var statuses = new[]
             {
                 ApplicationStatus.Draft,
@@ -94,9 +117,15 @@ public static class DbInitializer
                 .RuleFor(r => r.LandlordName, f => f.Name.FullName())
                 .RuleFor(r => r.LandlordPhone, f => f.Phone.PhoneNumber())
                 .RuleFor(r => r.MoveInDate, f => f.Date.Past(3, DateTime.UtcNow.AddYears(-1)))
-                .RuleFor(r => r.MoveOutDate, (f, r) => r.MoveInDate.AddMonths(f.Random.Number(6, 24)));
+                .RuleFor(r => r.MoveOutDate, (f, r) =>
+                {
+                    var candidate = r.MoveInDate.AddMonths(f.Random.Number(6, 24));
+                    return candidate > DateTime.UtcNow ? DateTime.UtcNow : candidate;
+                });
 
             var infoFaker = new Faker();
+            var submittedAt = DateTime.UtcNow.AddDays(-10);
+            Unit? approvedUnit = null;
 
             for (var i = 0; i < statuses.Length; i++)
             {
@@ -104,7 +133,6 @@ public static class DbInitializer
                 var unit = units[i];
                 var applicantUser = applicants[i % applicants.Count];
                 var reviewer = managers[i % managers.Count];
-                var submittedAt = DateTime.UtcNow.AddDays(-10);
 
                 var application = new RentalApplication
                 {
@@ -156,13 +184,13 @@ public static class DbInitializer
                             ChangedAt = submittedAt.AddDays(2),
                             Comment = "Application meets all criteria."
                         });
-                        context.Leases.Add(new Lease
+                        application.Lease = new Lease
                         {
                             Unit = unit,
-                            RentalApplication = application,
                             StartDate = DateTime.UtcNow.Date,
                             EndDate = DateTime.UtcNow.Date.AddMonths(12)
-                        });
+                        };
+                        approvedUnit = unit;
                         break;
                     case ApplicationStatus.Denied:
                         application.StatusHistory.Add(new ApplicationStatusHistory
@@ -186,6 +214,40 @@ public static class DbInitializer
                 context.RentalApplications.Add(application);
             }
 
+            // A second Submitted application on the unit that already has an active lease, so the
+            // "reject submit/approval when the unit has an active lease, leaving other open
+            // applications for it as they are" rule has data to demonstrate.
+            if (approvedUnit != null)
+            {
+                var conflictingApplicant = applicants[statuses.Length % applicants.Count];
+                var conflictingApplication = new RentalApplication
+                {
+                    ApplicantId = conflictingApplicant.Id,
+                    UnitId = approvedUnit.Id,
+                    Status = ApplicationStatus.Submitted,
+                    FullName = infoFaker.Name.FullName(),
+                    Phone = infoFaker.Phone.PhoneNumber(),
+                    Email = conflictingApplicant.Email!,
+                    CurrentAddress = infoFaker.Address.FullAddress(),
+                    IsApplicantInfoComplete = true,
+                    IsResidenceHistoryComplete = true
+                };
+                conflictingApplication.ResidenceHistories.Add(residenceFaker.Generate());
+                conflictingApplication.StatusHistory.Add(new ApplicationStatusHistory
+                {
+                    Status = ApplicationStatus.Draft,
+                    ChangedBy = conflictingApplicant,
+                    ChangedAt = submittedAt.AddDays(-1)
+                });
+                conflictingApplication.StatusHistory.Add(new ApplicationStatusHistory
+                {
+                    Status = ApplicationStatus.Submitted,
+                    ChangedBy = conflictingApplicant,
+                    ChangedAt = submittedAt.AddDays(1)
+                });
+                context.RentalApplications.Add(conflictingApplication);
+            }
+
             await context.SaveChangesAsync();
         }
     }
@@ -196,8 +258,20 @@ public static class DbInitializer
         if (user == null)
         {
             user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
-            await userManager.CreateAsync(user, "Password123!");
-            await userManager.AddToRoleAsync(user, role);
+
+            var createResult = await userManager.CreateAsync(user, "Password123!");
+            if (!createResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to create seed user '{email}': {string.Join("; ", createResult.Errors.Select(e => e.Description))}");
+            }
+
+            var roleResult = await userManager.AddToRoleAsync(user, role);
+            if (!roleResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to add seed user '{email}' to role '{role}': {string.Join("; ", roleResult.Errors.Select(e => e.Description))}");
+            }
         }
         return user;
     }

@@ -25,4 +25,7 @@ public class RentalApplication
 
     public ICollection<ResidenceHistory> ResidenceHistories { get; set; } = new List<ResidenceHistory>();
     public ICollection<ApplicationStatusHistory> StatusHistory { get; set; } = new List<ApplicationStatusHistory>();
+
+    // At most one lease per application, enforced at the DB level via a unique index on Lease.RentalApplicationId.
+    public Lease? Lease { get; set; }
 }

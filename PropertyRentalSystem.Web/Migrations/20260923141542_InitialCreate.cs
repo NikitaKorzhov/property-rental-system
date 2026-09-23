@@ -190,7 +190,7 @@ namespace PropertyRentalSystem.Web.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UnitNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UnitNumber = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Bedrooms = table.Column<int>(type: "int", nullable: false),
                     MonthlyRent = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PropertyId = table.Column<int>(type: "int", nullable: false),
@@ -204,13 +204,13 @@ namespace PropertyRentalSystem.Web.Migrations
                         column: x => x.PropertyId,
                         principalTable: "Properties",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Units_UnitTypes_UnitTypeId",
                         column: x => x.UnitTypeId,
                         principalTable: "UnitTypes",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -237,13 +237,13 @@ namespace PropertyRentalSystem.Web.Migrations
                         column: x => x.ApplicantId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RentalApplications_Units_UnitId",
                         column: x => x.UnitId,
                         principalTable: "Units",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -379,7 +379,8 @@ namespace PropertyRentalSystem.Web.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Leases_RentalApplicationId",
                 table: "Leases",
-                column: "RentalApplicationId");
+                column: "RentalApplicationId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Leases_UnitId",
@@ -402,9 +403,10 @@ namespace PropertyRentalSystem.Web.Migrations
                 column: "RentalApplicationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Units_PropertyId",
+                name: "IX_Units_PropertyId_UnitNumber",
                 table: "Units",
-                column: "PropertyId");
+                columns: new[] { "PropertyId", "UnitNumber" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Units_UnitTypeId",
