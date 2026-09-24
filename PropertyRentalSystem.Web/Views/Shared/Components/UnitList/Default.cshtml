@@ -1,0 +1,42 @@
+@model PropertyRentalSystem.Web.ViewModels.Units.UnitListComponentViewModel
+
+<table class="table table-sm align-middle mb-2">
+    <thead>
+        <tr>
+            <th>Unit #</th>
+            <th>Bedrooms</th>
+            <th>Monthly Rent</th>
+            <th>Type</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Units.Any())
+        {
+            <tr><td colspan="5" class="text-muted">No units yet.</td></tr>
+        }
+        @foreach (var unit in Model.Units)
+        {
+            <tr>
+                <td>@unit.UnitNumber</td>
+                <td>@unit.Bedrooms</td>
+                <td>@unit.MonthlyRent.ToString("C")</td>
+                <td>
+                    @unit.UnitTypeName
+                    @if (!unit.UnitTypeIsActive)
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </td>
+                <td class="text-end">
+                    <a href="#" class="btn btn-sm btn-outline-secondary"
+                       data-modal-url="@Url.Action("Edit", "Units", new { id = unit.Id })">Edit</a>
+                    <a href="#" class="btn btn-sm btn-outline-danger"
+                       data-modal-url="@Url.Action("DeleteConfirm", "Units", new { id = unit.Id })">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<a href="#" class="btn btn-sm btn-primary"
+   data-modal-url="@Url.Action("Create", "Units", new { propertyId = Model.PropertyId })">+ Add Unit</a>

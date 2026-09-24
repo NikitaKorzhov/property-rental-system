@@ -1,0 +1,26 @@
+@model List<PropertyRentalSystem.Web.ViewModels.Properties.PropertyListItemViewModel>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No properties yet.</p>
+}
+@foreach (var property in Model)
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <strong>@property.Name</strong>
+                <div class="text-muted small">@property.Address</div>
+            </div>
+            <div>
+                <a href="#" class="btn btn-sm btn-outline-secondary"
+                   data-modal-url="@Url.Action("Edit", "Properties", new { id = property.Id })">Edit</a>
+                <a href="#" class="btn btn-sm btn-outline-danger"
+                   data-modal-url="@Url.Action("DeleteConfirm", "Properties", new { id = property.Id })">Delete</a>
+            </div>
+        </div>
+        <div class="card-body">
+            @await Component.InvokeAsync("UnitList", new { propertyId = property.Id })
+        </div>
+    </div>
+}
