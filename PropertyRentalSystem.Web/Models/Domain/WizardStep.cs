@@ -1,4 +1,4 @@
-namespace PropertyRentalSystem.Web.ViewModels.Applications;
+namespace PropertyRentalSystem.Web.Models.Domain;
 
 public enum WizardStep
 {

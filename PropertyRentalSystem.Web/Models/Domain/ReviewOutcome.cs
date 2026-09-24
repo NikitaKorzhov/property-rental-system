@@ -1,4 +1,4 @@
-namespace PropertyRentalSystem.Web.ViewModels.Review;
+namespace PropertyRentalSystem.Web.Models.Domain;
 
 public enum ReviewOutcome
 {

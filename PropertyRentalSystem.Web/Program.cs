@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Services.Applications;
+using PropertyRentalSystem.Web.Services.Properties;
+using PropertyRentalSystem.Web.Services.Review;
+using PropertyRentalSystem.Web.Services.Units;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +39,16 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.LoginPath = "/Account/Login";
     o.AccessDeniedPath = "/Account/AccessDenied";
 });
+
+// Business logic lives in these services, grouped to mirror Controllers/ViewModels/Views
+// (Properties, Units, Applications, Review) so each is easy to find alongside its feature.
+builder.Services.AddScoped<IPropertyService, PropertyService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+builder.Services.AddScoped<IApplicationBrowseService, ApplicationBrowseService>();
+builder.Services.AddScoped<IApplicationWizardService, ApplicationWizardService>();
+builder.Services.AddScoped<IResidenceHistoryService, ResidenceHistoryService>();
+builder.Services.AddScoped<IApplicationReviewService, ApplicationReviewService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

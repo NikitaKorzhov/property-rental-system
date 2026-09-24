@@ -1,3 +1,4 @@
+using PropertyRentalSystem.Web.Models.Domain;
 using PropertyRentalSystem.Web.ViewModels.Review;
 
 namespace PropertyRentalSystem.Tests.ViewModels;

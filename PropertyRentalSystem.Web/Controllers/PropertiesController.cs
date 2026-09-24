@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.ViewModels.Properties;
 using PropertyRentalSystem.Web.ViewModels.Shared;
 
@@ -11,22 +10,22 @@ namespace PropertyRentalSystem.Web.Controllers;
 [Authorize(Roles = Roles.PropertyManager)]
 public class PropertiesController : ModalFormControllerBase
 {
-    private readonly ApplicationDbContext _db;
+    private readonly IPropertyService _properties;
 
-    public PropertiesController(ApplicationDbContext db)
+    public PropertiesController(IPropertyService properties)
     {
-        _db = db;
+        _properties = properties;
     }
 
     public async Task<IActionResult> Index()
     {
-        return View(await LoadPropertiesAsync());
+        return View(await LoadListAsync());
     }
 
     // Re-rendered into #properties-list by modal-forms.js after a create/edit succeeds.
     public async Task<IActionResult> List()
     {
-        return PartialView("_PropertiesList", await LoadPropertiesAsync());
+        return PartialView("_PropertiesList", await LoadListAsync());
     }
 
     [HttpGet]
@@ -41,16 +40,14 @@ public class PropertiesController : ModalFormControllerBase
         if (!ModelState.IsValid)
             return PartialView("_PropertyForm", model);
 
-        _db.Properties.Add(new Property { Name = model.Name, Address = model.Address });
-        await _db.SaveChangesAsync();
-
+        await _properties.CreateAsync(model.Name, model.Address);
         return FormSuccess();
     }
 
     [HttpGet]
     public async Task<IActionResult> Edit(int id)
     {
-        var property = await _db.Properties.FindAsync(id);
+        var property = await _properties.GetByIdAsync(id);
         if (property == null) return NotFound();
 
         return PartialView("_PropertyForm", new PropertyFormViewModel
@@ -68,20 +65,17 @@ public class PropertiesController : ModalFormControllerBase
         if (!ModelState.IsValid)
             return PartialView("_PropertyForm", model);
 
-        var property = await _db.Properties.FindAsync(id);
+        var property = await _properties.GetByIdAsync(id);
         if (property == null) return NotFound();
 
-        property.Name = model.Name;
-        property.Address = model.Address;
-        await _db.SaveChangesAsync();
-
+        await _properties.UpdateAsync(property, model.Name, model.Address);
         return FormSuccess();
     }
 
     [HttpGet]
     public async Task<IActionResult> DeleteConfirm(int id)
     {
-        var property = await _db.Properties.FindAsync(id);
+        var property = await _properties.GetByIdAsync(id);
         if (property == null) return NotFound();
 
         return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", BuildDeleteConfirmModel(property));
@@ -90,19 +84,15 @@ public class PropertiesController : ModalFormControllerBase
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
-        var property = await _db.Properties.FindAsync(id);
+        var property = await _properties.GetByIdAsync(id);
         if (property == null) return NotFound();
 
-        _db.Properties.Remove(property);
-        try
+        var result = await _properties.DeleteAsync(property);
+        if (!result.Succeeded)
         {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            // Unit.PropertyId is a Restrict FK — a property with units can't cascade-delete them.
             // Re-render the same confirm partial with the error, same as a failed Create/Edit.
-            ModelState.AddModelError(string.Empty, "Can't delete a property that still has units. Remove its units first.");
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(error.Field, error.Message);
             return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", BuildDeleteConfirmModel(property));
         }
 
@@ -117,11 +107,11 @@ public class PropertiesController : ModalFormControllerBase
         RefreshUrl = Url.Action(nameof(List))!
     };
 
-    private async Task<List<PropertyListItemViewModel>> LoadPropertiesAsync()
+    private async Task<List<PropertyListItemViewModel>> LoadListAsync()
     {
-        return await _db.Properties
-            .OrderBy(p => p.Name)
+        var properties = await _properties.GetAllAsync();
+        return properties
             .Select(p => new PropertyListItemViewModel { Id = p.Id, Name = p.Name, Address = p.Address })
-            .ToListAsync();
+            .ToList();
     }
 }

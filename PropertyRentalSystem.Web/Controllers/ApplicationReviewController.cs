@@ -2,10 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using PropertyRentalSystem.Web.Data;
-using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Services.Properties;
+using PropertyRentalSystem.Web.Services.Review;
 using PropertyRentalSystem.Web.ViewModels.Review;
 
 namespace PropertyRentalSystem.Web.Controllers;
@@ -13,43 +12,37 @@ namespace PropertyRentalSystem.Web.Controllers;
 [Authorize(Roles = Roles.PropertyManager)]
 public class ApplicationReviewController : ModalFormControllerBase
 {
-    private readonly ApplicationDbContext _db;
+    private readonly IApplicationReviewService _review;
+    private readonly IPropertyService _properties;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ApplicationReviewController(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
+    public ApplicationReviewController(
+        IApplicationReviewService review, IPropertyService properties, UserManager<ApplicationUser> userManager)
     {
-        _db = db;
+        _review = review;
+        _properties = properties;
         _userManager = userManager;
     }
 
     private string CurrentUserId => _userManager.GetUserId(User)!;
 
-    // Filtering is done in the database (translated to SQL WHERE), not in memory.
     public async Task<IActionResult> Index(ApplicationStatus? status, int? propertyId)
     {
-        var query = _db.RentalApplications.AsQueryable();
-        if (status.HasValue)
-            query = query.Where(a => a.Status == status.Value);
-        if (propertyId.HasValue)
-            query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
-
-        var applications = await query
-            .OrderByDescending(a => a.Id)
-            .Select(a => new PmApplicationListItemViewModel
-            {
-                Id = a.Id,
-                ApplicantEmail = a.Applicant.Email!,
-                PropertyName = a.Unit.Property.Name,
-                UnitNumber = a.Unit.UnitNumber,
-                Status = a.Status
-            })
-            .ToListAsync();
-
-        var properties = await _db.Properties.OrderBy(p => p.Name).ToListAsync();
+        var applications = await _review.GetFilteredAsync(status, propertyId);
+        var properties = await _properties.GetAllAsync();
 
         return View(new PmApplicationListViewModel
         {
-            Applications = applications,
+            Applications = applications
+                .Select(a => new PmApplicationListItemViewModel
+                {
+                    Id = a.Id,
+                    ApplicantEmail = a.Applicant.Email!,
+                    PropertyName = a.Unit.Property.Name,
+                    UnitNumber = a.Unit.UnitNumber,
+                    Status = a.Status
+                })
+                .ToList(),
             SelectedStatus = status,
             SelectedPropertyId = propertyId,
             StatusOptions = Enum.GetValues<ApplicationStatus>()
@@ -63,20 +56,10 @@ public class ApplicationReviewController : ModalFormControllerBase
 
     public async Task<IActionResult> Details(int id)
     {
-        var application = await _db.RentalApplications.FindAsync(id);
+        var application = await _review.GetByIdAsync(id);
         if (application == null) return NotFound();
 
-        var history = await _db.ApplicationStatusHistories
-            .Where(h => h.RentalApplicationId == id)
-            .OrderBy(h => h.ChangedAt)
-            .Select(h => new StatusHistoryItemViewModel
-            {
-                Status = h.Status,
-                ChangedByEmail = h.ChangedBy.Email!,
-                ChangedAt = h.ChangedAt,
-                Comment = h.Comment
-            })
-            .ToListAsync();
+        var history = await _review.GetHistoryAsync(id);
 
         return View(new ApplicationDetailsViewModel
         {
@@ -84,14 +67,22 @@ public class ApplicationReviewController : ModalFormControllerBase
             Status = application.Status,
             CanReview = application.Status == ApplicationStatus.Submitted,
             History = history
+                .Select(h => new StatusHistoryItemViewModel
+                {
+                    Status = h.Status,
+                    ChangedByEmail = h.ChangedBy.Email!,
+                    ChangedAt = h.ChangedAt,
+                    Comment = h.Comment
+                })
+                .ToList()
         });
     }
 
     [HttpGet]
     public async Task<IActionResult> ReviewConfirm(int id)
     {
-        var application = await _db.RentalApplications.FindAsync(id);
-        if (application == null || application.Status != ApplicationStatus.Submitted) return NotFound();
+        var application = await _review.GetReviewableAsync(id);
+        if (application == null) return NotFound();
 
         return PartialView("_ReviewForm", new ReviewFormViewModel { Id = id });
     }
@@ -99,55 +90,20 @@ public class ApplicationReviewController : ModalFormControllerBase
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Review(ReviewFormViewModel model)
     {
-        var application = await _db.RentalApplications.FindAsync(model.Id);
-        // Controllers reject posts that are not allowed: only a Submitted application can be reviewed.
-        if (application == null || application.Status != ApplicationStatus.Submitted)
-            return NotFound();
+        var application = await _review.GetReviewableAsync(model.Id);
+        if (application == null) return NotFound();
 
         if (!ModelState.IsValid)
             return PartialView("_ReviewForm", model);
 
-        if (model.Outcome == ReviewOutcome.Approve)
+        var result = await _review.ReviewAsync(application, model.Outcome!.Value, model.Comment, CurrentUserId);
+        if (!result.Succeeded)
         {
-            var today = DateTime.UtcNow.Date;
-            var unitLeases = await _db.Leases.Where(l => l.UnitId == application.UnitId).ToListAsync();
-            var hasActiveLease = unitLeases.Any(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, today));
-            if (hasActiveLease)
-            {
-                // The approval check prevents a second lease. Other open applications for
-                // this unit are left as they are — only this one is rejected.
-                ModelState.AddModelError(string.Empty,
-                    "This unit already has an active lease. Approval is blocked to prevent a second lease.");
-                return PartialView("_ReviewForm", model);
-            }
-
-            application.Status = ApplicationStatus.Approved;
-            application.Lease = new Lease
-            {
-                UnitId = application.UnitId,
-                StartDate = today,
-                EndDate = LeaseRules.ComputeEndDate(today)
-            };
-        }
-        else if (model.Outcome == ReviewOutcome.Return)
-        {
-            application.Status = ApplicationStatus.Returned;
-        }
-        else
-        {
-            application.Status = ApplicationStatus.Denied;
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(error.Field, error.Message);
+            return PartialView("_ReviewForm", model);
         }
 
-        _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
-        {
-            RentalApplicationId = application.Id,
-            Status = application.Status,
-            ChangedByUserId = CurrentUserId,
-            ChangedAt = DateTime.UtcNow,
-            Comment = string.IsNullOrWhiteSpace(model.Comment) ? null : model.Comment.Trim()
-        });
-
-        await _db.SaveChangesAsync();
         return FormSuccess();
     }
 }
