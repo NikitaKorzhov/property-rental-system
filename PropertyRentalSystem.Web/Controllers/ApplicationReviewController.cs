@@ -126,7 +126,7 @@ public class ApplicationReviewController : ModalFormControllerBase
             {
                 UnitId = application.UnitId,
                 StartDate = today,
-                EndDate = today.AddMonths(12)
+                EndDate = LeaseRules.ComputeEndDate(today)
             };
         }
         else if (model.Outcome == ReviewOutcome.Return)

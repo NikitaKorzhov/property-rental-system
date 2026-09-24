@@ -45,4 +45,23 @@ public class LeaseRulesTests
 
         Assert.True(result);
     }
+
+    [Fact]
+    public void ComputeEndDate_RunsThroughTheDayBeforeTheOneYearAnniversary()
+    {
+        var end = LeaseRules.ComputeEndDate(new DateTime(2026, 1, 1));
+
+        Assert.Equal(new DateTime(2026, 12, 31), end);
+    }
+
+    [Fact]
+    public void ComputeEndDate_DoesNotCoverTheStartDateOneYearLater()
+    {
+        var start = new DateTime(2026, 6, 15);
+        var end = LeaseRules.ComputeEndDate(start);
+        var oneYearLater = start.AddYears(1);
+
+        // The unit must be available again exactly on the anniversary, not one day late.
+        Assert.False(LeaseRules.CoversDate(start, end, oneYearLater));
+    }
 }

@@ -1,6 +1,7 @@
 using Bogus;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
 
 namespace PropertyRentalSystem.Web.Data;
@@ -188,7 +189,7 @@ public static class DbInitializer
                         {
                             Unit = unit,
                             StartDate = DateTime.UtcNow.Date,
-                            EndDate = DateTime.UtcNow.Date.AddMonths(12)
+                            EndDate = LeaseRules.ComputeEndDate(DateTime.UtcNow.Date)
                         };
                         approvedUnit = unit;
                         break;

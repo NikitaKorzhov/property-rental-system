@@ -1,5 +1,5 @@
 @using PropertyRentalSystem.Web.Models.Domain
-@model List<PropertyRentalSystem.Web.ViewModels.Applications.ApplicationListItemViewModel>
+@model PropertyRentalSystem.Web.ViewModels.Applications.ApplicationListViewModel
 @{
     ViewData["Title"] = "My Applications";
 }
@@ -18,9 +18,34 @@
     <div class="alert alert-danger">@error</div>
 }
 
-@if (!Model.Any())
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="status" class="form-select">
+            <option value="">All statuses</option>
+            @foreach (var item in Model.StatusOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="propertyId" class="form-select">
+            <option value="">All properties</option>
+            @foreach (var item in Model.PropertyOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+
+@if (!Model.Applications.Any())
 {
-    <p class="text-muted">You haven't started any applications yet.</p>
+    <p class="text-muted">No applications match the filter.</p>
 }
 else
 {
@@ -29,7 +54,7 @@ else
             <tr><th>Property</th><th>Unit</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
-        @foreach (var app in Model)
+        @foreach (var app in Model.Applications)
         {
             <tr>
                 <td>@app.PropertyName</td>

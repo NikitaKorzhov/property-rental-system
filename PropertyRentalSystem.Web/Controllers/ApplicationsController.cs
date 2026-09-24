@@ -28,10 +28,18 @@ public class ApplicationsController : ModalFormControllerBase
 
     // ---------- My applications ----------
 
-    public async Task<IActionResult> Index()
+    // Filtered by status and property, done in the database via IQueryable.Where — same as
+    // the property manager's list, just scoped to the current applicant's own applications.
+    public async Task<IActionResult> Index(ApplicationStatus? status, int? propertyId)
     {
-        var applications = await _db.RentalApplications
-            .Where(a => a.ApplicantId == CurrentUserId)
+        var query = _db.RentalApplications.Where(a => a.ApplicantId == CurrentUserId);
+
+        if (status.HasValue)
+            query = query.Where(a => a.Status == status.Value);
+        if (propertyId.HasValue)
+            query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
+
+        var applications = await query
             .OrderByDescending(a => a.Id)
             .Select(a => new ApplicationListItemViewModel
             {
@@ -42,7 +50,20 @@ public class ApplicationsController : ModalFormControllerBase
             })
             .ToListAsync();
 
-        return View(applications);
+        var properties = await _db.Properties.OrderBy(p => p.Name).ToListAsync();
+
+        return View(new ApplicationListViewModel
+        {
+            Applications = applications,
+            SelectedStatus = status,
+            SelectedPropertyId = propertyId,
+            StatusOptions = Enum.GetValues<ApplicationStatus>()
+                .Select(s => new SelectListItem(s.ToString(), s.ToString(), s == status))
+                .ToList(),
+            PropertyOptions = properties
+                .Select(p => new SelectListItem(p.Name, p.Id.ToString(), p.Id == propertyId))
+                .ToList()
+        });
     }
 
     // ---------- Browse available units ----------
