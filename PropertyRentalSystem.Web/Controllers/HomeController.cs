@@ -11,11 +11,9 @@ public class HomeController : Controller
     [AllowAnonymous]
     public IActionResult Index()
     {
-        return View();
-    }
-    [Authorize(Roles = Roles.PropertyManager)]
-    public IActionResult Privacy()
-    {
+        if (User.IsInRole(Roles.Applicant))
+            return RedirectToAction("Browse", "Applications");
+
         return View();
     }
 

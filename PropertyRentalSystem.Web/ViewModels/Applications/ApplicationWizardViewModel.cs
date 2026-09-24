@@ -17,6 +17,10 @@ public class ApplicationWizardViewModel
     public string PropertyName { get; set; } = string.Empty;
     public string UnitNumber { get; set; } = string.Empty;
 
+    // The property manager's comment from the most recent Returned/Denied review, if any —
+    // so the applicant can see why before correcting and resubmitting.
+    public string? ReviewComment { get; set; }
+
     [Display(Name = "Full Name")]
     public string FullName { get; set; } = string.Empty;
 

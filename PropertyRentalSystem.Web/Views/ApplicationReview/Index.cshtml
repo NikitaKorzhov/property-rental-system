@@ -46,7 +46,7 @@ else
                 <td>@app.ApplicantEmail</td>
                 <td>@app.PropertyName</td>
                 <td>@app.UnitNumber</td>
-                <td><span class="badge bg-secondary">@app.Status</span></td>
+                <td><partial name="_StatusBadge" model="app.Status" /></td>
                 <td><a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@app.Id">Details</a></td>
             </tr>
         }

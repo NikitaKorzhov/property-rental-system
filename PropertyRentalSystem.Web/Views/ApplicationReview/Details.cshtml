@@ -5,7 +5,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>@ViewData["Title"]</h1>
-    <span class="badge bg-secondary fs-6">@Model.Status</span>
+    <span class="fs-6"><partial name="_StatusBadge" model="Model.Status" /></span>
 </div>
 
 @await Component.InvokeAsync("ApplicationSummary", new { applicationId = Model.Id })

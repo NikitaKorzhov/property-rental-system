@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Domain.Rules;
@@ -46,7 +47,9 @@ public class ApplicationsController : ModalFormControllerBase
 
     // ---------- Browse available units ----------
 
-    public async Task<IActionResult> Browse()
+    // Filtering (property, unit type, bedrooms, max rent) is applied in the database via
+    // IQueryable.Where, not by filtering an already-materialized list in memory.
+    public async Task<IActionResult> Browse(int? propertyId, int? unitTypeId, int? bedrooms, decimal? maxRent)
     {
         var today = DateTime.UtcNow.Date;
 
@@ -57,8 +60,18 @@ public class ApplicationsController : ModalFormControllerBase
             .Select(l => l.UnitId)
             .ToHashSet();
 
-        var units = await _db.Units
-            .Where(u => !unavailableUnitIds.Contains(u.Id))
+        var query = _db.Units.Where(u => !unavailableUnitIds.Contains(u.Id));
+
+        if (propertyId.HasValue)
+            query = query.Where(u => u.PropertyId == propertyId.Value);
+        if (unitTypeId.HasValue)
+            query = query.Where(u => u.UnitTypeId == unitTypeId.Value);
+        if (bedrooms.HasValue)
+            query = query.Where(u => u.Bedrooms == bedrooms.Value);
+        if (maxRent.HasValue)
+            query = query.Where(u => u.MonthlyRent <= maxRent.Value);
+
+        var units = await query
             .OrderBy(u => u.Property.Name).ThenBy(u => u.UnitNumber)
             .Select(u => new BrowseUnitViewModel
             {
@@ -82,7 +95,27 @@ public class ApplicationsController : ModalFormControllerBase
                 unit.ExistingApplicationId = applicationId;
         }
 
-        return View(units);
+        var properties = await _db.Properties.OrderBy(p => p.Name).ToListAsync();
+        var unitTypes = await _db.UnitTypes.OrderBy(t => t.Name).ToListAsync();
+        var bedroomCounts = await _db.Units.Select(u => u.Bedrooms).Distinct().OrderBy(b => b).ToListAsync();
+
+        return View(new BrowseUnitsViewModel
+        {
+            Units = units,
+            PropertyOptions = properties
+                .Select(p => new SelectListItem(p.Name, p.Id.ToString(), p.Id == propertyId))
+                .ToList(),
+            UnitTypeOptions = unitTypes
+                .Select(t => new SelectListItem(t.Name, t.Id.ToString(), t.Id == unitTypeId))
+                .ToList(),
+            BedroomOptions = bedroomCounts
+                .Select(b => new SelectListItem(b.ToString(), b.ToString(), b == bedrooms))
+                .ToList(),
+            PropertyId = propertyId,
+            UnitTypeId = unitTypeId,
+            Bedrooms = bedrooms,
+            MaxRent = maxRent
+        });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -133,7 +166,8 @@ public class ApplicationsController : ModalFormControllerBase
         if (application == null) return NotFound();
 
         var step = DetermineStep(application);
-        return View(BuildViewModel(application, step));
+        var reviewComment = await GetReviewCommentAsync(application);
+        return View(BuildViewModel(application, step, reviewComment: reviewComment));
     }
 
     [HttpPost, ValidateAntiForgeryToken]
@@ -141,6 +175,8 @@ public class ApplicationsController : ModalFormControllerBase
     {
         var application = await LoadForCurrentUserAsync(model.Id);
         if (application == null) return NotFound();
+
+        var reviewComment = await GetReviewCommentAsync(application);
 
         // Controllers reject posts that are not allowed: only Draft/Returned may be edited or
         // submitted. Stale client state (browser back/forward cache, a second tab, a resubmitted
@@ -162,12 +198,12 @@ public class ApplicationsController : ModalFormControllerBase
                 // so asp-for reads the fresh model (e.g. the new Step) instead of redisplaying
                 // whatever was in the just-submitted form for those same field names.
                 ModelState.Clear();
-                return View(BuildViewModel(application, previousStep));
+                return View(BuildViewModel(application, previousStep, reviewComment: reviewComment));
 
             case "Continue" when model.Step == WizardStep.ApplicantInfo:
                 ValidateApplicantInfo(model);
                 if (!ModelState.IsValid)
-                    return View(BuildViewModel(application, WizardStep.ApplicantInfo, model));
+                    return View(BuildViewModel(application, WizardStep.ApplicantInfo, model, reviewComment));
 
                 application.FullName = model.FullName.Trim();
                 application.Phone = model.Phone.Trim();
@@ -177,7 +213,7 @@ public class ApplicationsController : ModalFormControllerBase
                 await _db.SaveChangesAsync();
 
                 ModelState.Clear();
-                return View(BuildViewModel(application, WizardStep.ResidenceHistory));
+                return View(BuildViewModel(application, WizardStep.ResidenceHistory, reviewComment: reviewComment));
 
             case "Continue" when model.Step == WizardStep.ResidenceHistory:
                 application.IsResidenceHistoryComplete = true;
@@ -185,19 +221,19 @@ public class ApplicationsController : ModalFormControllerBase
 
                 ModelState.Clear();
 
-                return View(BuildViewModel(application, WizardStep.Summary));
+                return View(BuildViewModel(application, WizardStep.Summary, reviewComment: reviewComment));
 
             case "Submit" when model.Step == WizardStep.Summary:
                 if (!RentalApplicationRules.CanSubmit(application.IsApplicantInfoComplete, application.IsResidenceHistoryComplete))
                 {
                     ModelState.AddModelError(string.Empty, "Complete both sections before submitting.");
-                    return View(BuildViewModel(application, WizardStep.Summary));
+                    return View(BuildViewModel(application, WizardStep.Summary, reviewComment: reviewComment));
                 }
 
                 if (await HasActiveLeaseAsync(application.UnitId, DateTime.UtcNow.Date))
                 {
                     ModelState.AddModelError(string.Empty, "This unit currently has an active lease and can't accept new applications.");
-                    return View(BuildViewModel(application, WizardStep.Summary));
+                    return View(BuildViewModel(application, WizardStep.Summary, reviewComment: reviewComment));
                 }
 
                 application.Status = ApplicationStatus.Submitted;
@@ -395,6 +431,20 @@ public class ApplicationsController : ModalFormControllerBase
         return unitLeases.Any(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, asOf));
     }
 
+    // The comment behind the application's current status, if it's Returned or Denied — the
+    // latest one, in case an application was returned and corrected more than once.
+    private async Task<string?> GetReviewCommentAsync(RentalApplication application)
+    {
+        if (application.Status is not (ApplicationStatus.Returned or ApplicationStatus.Denied))
+            return null;
+
+        return await _db.ApplicationStatusHistories
+            .Where(h => h.RentalApplicationId == application.Id && h.Status == application.Status)
+            .OrderByDescending(h => h.ChangedAt)
+            .Select(h => h.Comment)
+            .FirstOrDefaultAsync();
+    }
+
     // Non-editable (Submitted/terminal) applications have nothing to walk through, so they
     // always resume at the read-only Summary, which shows both sections at once. Editable
     // applications resume at the first section that still needs work; if both are already
@@ -412,7 +462,7 @@ public class ApplicationsController : ModalFormControllerBase
     }
 
     private static ApplicationWizardViewModel BuildViewModel(
-        RentalApplication application, WizardStep step, ApplicationWizardViewModel? overlay = null)
+        RentalApplication application, WizardStep step, ApplicationWizardViewModel? overlay = null, string? reviewComment = null)
     {
         return new ApplicationWizardViewModel
         {
@@ -423,6 +473,7 @@ public class ApplicationsController : ModalFormControllerBase
             CanSubmit = RentalApplicationRules.CanSubmit(application.IsApplicantInfoComplete, application.IsResidenceHistoryComplete),
             PropertyName = application.Unit.Property.Name,
             UnitNumber = application.Unit.UnitNumber,
+            ReviewComment = reviewComment,
             FullName = overlay?.FullName ?? application.FullName,
             Phone = overlay?.Phone ?? application.Phone,
             Email = overlay?.Email ?? application.Email,

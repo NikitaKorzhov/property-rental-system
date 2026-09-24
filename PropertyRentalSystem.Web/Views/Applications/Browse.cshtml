@@ -1,4 +1,4 @@
-@model List<PropertyRentalSystem.Web.ViewModels.Applications.BrowseUnitViewModel>
+@model PropertyRentalSystem.Web.ViewModels.Applications.BrowseUnitsViewModel
 @{
     ViewData["Title"] = "Browse Units";
 }
@@ -10,13 +10,54 @@
     <div class="alert alert-danger">@error</div>
 }
 
-@if (!Model.Any())
+<form method="get" class="row g-2 mb-3 align-items-end">
+    <div class="col-auto">
+        <label class="form-label mb-0">Property</label>
+        <select name="propertyId" class="form-select">
+            <option value="">All properties</option>
+            @foreach (var item in Model.PropertyOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0">Unit type</label>
+        <select name="unitTypeId" class="form-select">
+            <option value="">Any type</option>
+            @foreach (var item in Model.UnitTypeOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0">Bedrooms</label>
+        <select name="bedrooms" class="form-select">
+            <option value="">Any</option>
+            @foreach (var item in Model.BedroomOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0">Max rent</label>
+        <input type="number" name="maxRent" class="form-control" step="50" min="0" value="@Model.MaxRent" placeholder="Any" />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+        <a asp-action="Browse" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+
+@if (!Model.Units.Any())
 {
-    <p class="text-muted">No units are currently available.</p>
+    <p class="text-muted">No units match the filter.</p>
 }
 
 <div class="row">
-    @foreach (var unit in Model)
+    @foreach (var unit in Model.Units)
     {
         <div class="col-md-4 mb-3">
             <div class="card h-100">

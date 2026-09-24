@@ -10,8 +10,17 @@
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">&larr; Back to My Applications</a>
 </div>
 <p class="text-muted">
-    Unit @Model.UnitNumber — @Model.PropertyName &middot; Status: <span class="badge bg-secondary">@Model.Status</span>
+    Unit @Model.UnitNumber — @Model.PropertyName &middot; Status: <partial name="_StatusBadge" model="Model.Status" />
 </p>
+
+@if (!string.IsNullOrWhiteSpace(Model.ReviewComment))
+{
+    var alertClass = Model.Status == ApplicationStatus.Denied ? "alert-danger" : "alert-warning";
+    <div class="alert @alertClass">
+        <strong>@(Model.Status == ApplicationStatus.Denied ? "Application denied:" : "Returned for correction:")</strong>
+        @Model.ReviewComment
+    </div>
+}
 
 <form asp-action="Wizard" method="post">
     <input type="hidden" asp-for="Id" />

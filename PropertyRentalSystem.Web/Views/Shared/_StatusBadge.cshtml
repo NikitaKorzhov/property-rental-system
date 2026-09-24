@@ -1,0 +1,15 @@
+@using PropertyRentalSystem.Web.Models.Domain
+@model ApplicationStatus
+@{
+    var cssClass = Model switch
+    {
+        ApplicationStatus.Draft => "text-bg-secondary",
+        ApplicationStatus.Submitted => "text-bg-info",
+        ApplicationStatus.Returned => "text-bg-warning",
+        ApplicationStatus.Approved => "text-bg-success",
+        ApplicationStatus.Denied => "text-bg-danger",
+        ApplicationStatus.Withdrawn => "text-bg-dark",
+        _ => "text-bg-secondary"
+    };
+}
+<span class="badge @cssClass">@Model</span>
