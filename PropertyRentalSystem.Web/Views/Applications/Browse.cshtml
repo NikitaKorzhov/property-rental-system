@@ -1,0 +1,45 @@
+@model List<PropertyRentalSystem.Web.ViewModels.Applications.BrowseUnitViewModel>
+@{
+    ViewData["Title"] = "Browse Units";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No units are currently available.</p>
+}
+
+<div class="row">
+    @foreach (var unit in Model)
+    {
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">@unit.PropertyName — Unit @unit.UnitNumber</h5>
+                    <p class="card-text text-muted">@unit.PropertyAddress</p>
+                    <p class="card-text">
+                        @unit.Bedrooms bd &middot; @unit.MonthlyRent.ToString("C")/mo &middot; @unit.UnitTypeName
+                    </p>
+                    <div class="mt-auto">
+                        @if (unit.ExistingApplicationId is int applicationId)
+                        {
+                            <a class="btn btn-outline-primary" asp-action="Wizard" asp-route-id="@applicationId">Continue Application</a>
+                        }
+                        else
+                        {
+                            <form asp-action="Start" asp-route-unitId="@unit.Id" method="post">
+                                <button type="submit" class="btn btn-primary">Apply</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

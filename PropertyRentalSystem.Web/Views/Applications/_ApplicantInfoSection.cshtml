@@ -1,0 +1,33 @@
+@model PropertyRentalSystem.Web.ViewModels.Applications.ApplicationWizardViewModel
+@if (Model.IsEditable)
+{
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control" />
+        <span asp-validation-for="FullName" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Phone" class="form-label"></label>
+        <input asp-for="Phone" class="form-control" />
+        <span asp-validation-for="Phone" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="CurrentAddress" class="form-label"></label>
+        <input asp-for="CurrentAddress" class="form-control" />
+        <span asp-validation-for="CurrentAddress" class="text-danger"></span>
+    </div>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">Full Name</dt><dd class="col-sm-9">@Model.FullName</dd>
+        <dt class="col-sm-3">Phone</dt><dd class="col-sm-9">@Model.Phone</dd>
+        <dt class="col-sm-3">Email</dt><dd class="col-sm-9">@Model.Email</dd>
+        <dt class="col-sm-3">Current Address</dt><dd class="col-sm-9">@Model.CurrentAddress</dd>
+    </dl>
+}

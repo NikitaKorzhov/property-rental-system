@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
+using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
 using PropertyRentalSystem.Web.ViewModels.Shared;
 using PropertyRentalSystem.Web.ViewModels.Units;
@@ -10,7 +11,7 @@ using PropertyRentalSystem.Web.ViewModels.Units;
 namespace PropertyRentalSystem.Web.Controllers;
 
 [Authorize(Roles = Roles.PropertyManager)]
-public class UnitsController : Controller
+public class UnitsController : ModalFormControllerBase
 {
     private readonly ApplicationDbContext _db;
 
@@ -150,13 +151,9 @@ public class UnitsController : Controller
             return;
         }
 
-        var unitTypeUnchanged = currentUnitTypeId.HasValue && model.UnitTypeId == currentUnitTypeId.Value;
-        if (!unitTypeUnchanged)
-        {
-            var isActive = await _db.UnitTypes.AnyAsync(t => t.Id == model.UnitTypeId && t.IsActive);
-            if (!isActive)
-                ModelState.AddModelError(nameof(model.UnitTypeId), "This unit type is inactive and can't be assigned.");
-        }
+        var candidateIsActive = await _db.UnitTypes.AnyAsync(t => t.Id == model.UnitTypeId && t.IsActive);
+        if (!UnitTypeRules.CanAssign(candidateIsActive, model.UnitTypeId, currentUnitTypeId))
+            ModelState.AddModelError(nameof(model.UnitTypeId), "This unit type is inactive and can't be assigned.");
 
         var duplicateNumber = await _db.Units.AnyAsync(u =>
             u.PropertyId == model.PropertyId &&
@@ -176,11 +173,5 @@ public class UnitsController : Controller
         model.UnitTypeOptions = types
             .Select(t => new SelectListItem(t.IsActive ? t.Name : $"{t.Name} (Inactive)", t.Id.ToString()))
             .ToList();
-    }
-
-    private IActionResult FormSuccess()
-    {
-        Response.Headers["X-Form-Success"] = "true";
-        return NoContent();
     }
 }

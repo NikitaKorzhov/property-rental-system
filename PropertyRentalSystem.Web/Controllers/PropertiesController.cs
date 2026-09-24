@@ -9,7 +9,7 @@ using PropertyRentalSystem.Web.ViewModels.Shared;
 namespace PropertyRentalSystem.Web.Controllers;
 
 [Authorize(Roles = Roles.PropertyManager)]
-public class PropertiesController : Controller
+public class PropertiesController : ModalFormControllerBase
 {
     private readonly ApplicationDbContext _db;
 
@@ -123,11 +123,5 @@ public class PropertiesController : Controller
             .OrderBy(p => p.Name)
             .Select(p => new PropertyListItemViewModel { Id = p.Id, Name = p.Name, Address = p.Address })
             .ToListAsync();
-    }
-
-    private IActionResult FormSuccess()
-    {
-        Response.Headers["X-Form-Success"] = "true";
-        return NoContent();
     }
 }

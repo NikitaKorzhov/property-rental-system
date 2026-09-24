@@ -1,0 +1,55 @@
+@model PropertyRentalSystem.Web.ViewModels.Review.PmApplicationListViewModel
+@{
+    ViewData["Title"] = "Applications";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="status" class="form-select">
+            <option value="">All statuses</option>
+            @foreach (var item in Model.StatusOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <select name="propertyId" class="form-select">
+            <option value="">All properties</option>
+            @foreach (var item in Model.PropertyOptions)
+            {
+                <option value="@item.Value" selected="@(item.Selected ? "selected" : null)">@item.Text</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </div>
+</form>
+
+@if (!Model.Applications.Any())
+{
+    <p class="text-muted">No applications match the filter.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr><th>Applicant</th><th>Property</th><th>Unit</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+        @foreach (var app in Model.Applications)
+        {
+            <tr>
+                <td>@app.ApplicantEmail</td>
+                <td>@app.PropertyName</td>
+                <td>@app.UnitNumber</td>
+                <td><span class="badge bg-secondary">@app.Status</span></td>
+                <td><a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@app.Id">Details</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

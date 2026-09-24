@@ -31,6 +31,15 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Properties" asp-action="Index">Properties</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="ApplicationReview" asp-action="Index">Applications</a>
+                            </li>
+                        }
+                        @if (User.IsInRole(Roles.Applicant))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Applications" asp-action="Index">My Applications</a>
+                            </li>
                         }
                     </ul>
                     <partial name="_LoginPartial" /> 

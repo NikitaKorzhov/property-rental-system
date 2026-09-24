@@ -1,0 +1,47 @@
+@model PropertyRentalSystem.Web.ViewModels.Applications.ApplicationWizardViewModel
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Address</th>
+            <th>Landlord</th>
+            <th>Landlord Phone</th>
+            <th>Move-in</th>
+            <th>Move-out</th>
+            @if (Model.IsEditable)
+            {
+                <th></th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.ResidenceHistories.Any())
+        {
+            <tr><td colspan="6" class="text-muted">No prior residences added.</td></tr>
+        }
+        @foreach (var r in Model.ResidenceHistories)
+        {
+            <tr>
+                <td>@r.Address</td>
+                <td>@r.LandlordName</td>
+                <td>@r.LandlordPhone</td>
+                <td>@r.MoveInDate.ToString("d")</td>
+                <td>@r.MoveOutDate.ToString("d")</td>
+                @if (Model.IsEditable)
+                {
+                    <td class="text-end">
+                        <a href="#" class="btn btn-sm btn-outline-secondary"
+                           data-modal-url="@Url.Action("EditResidence", "Applications", new { id = r.Id })">Edit</a>
+                        <a href="#" class="btn btn-sm btn-outline-danger"
+                           data-modal-url="@Url.Action("DeleteResidenceConfirm", "Applications", new { id = r.Id })">Delete</a>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+@if (Model.IsEditable)
+{
+    <a href="#" class="btn btn-sm btn-primary"
+       data-modal-url="@Url.Action("AddResidence", "Applications", new { applicationId = Model.Id })">+ Add Residence</a>
+}

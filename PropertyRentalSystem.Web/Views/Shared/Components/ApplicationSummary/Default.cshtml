@@ -1,0 +1,38 @@
+@model PropertyRentalSystem.Web.ViewModels.Applications.ApplicationSummaryViewModel
+
+<h5>Unit</h5>
+<p>@Model.UnitNumber — @Model.PropertyName</p>
+
+<h5>Applicant Information</h5>
+<dl class="row">
+    <dt class="col-sm-3">Full Name</dt><dd class="col-sm-9">@Model.FullName</dd>
+    <dt class="col-sm-3">Phone</dt><dd class="col-sm-9">@Model.Phone</dd>
+    <dt class="col-sm-3">Email</dt><dd class="col-sm-9">@Model.Email</dd>
+    <dt class="col-sm-3">Current Address</dt><dd class="col-sm-9">@Model.CurrentAddress</dd>
+</dl>
+
+<h5>Residence History</h5>
+@if (!Model.ResidenceHistories.Any())
+{
+    <p class="text-muted">No prior residences listed.</p>
+}
+else
+{
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Address</th><th>Landlord</th><th>Phone</th><th>Move-in</th><th>Move-out</th></tr>
+        </thead>
+        <tbody>
+        @foreach (var r in Model.ResidenceHistories)
+        {
+            <tr>
+                <td>@r.Address</td>
+                <td>@r.LandlordName</td>
+                <td>@r.LandlordPhone</td>
+                <td>@r.MoveInDate.ToString("d")</td>
+                <td>@r.MoveOutDate.ToString("d")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

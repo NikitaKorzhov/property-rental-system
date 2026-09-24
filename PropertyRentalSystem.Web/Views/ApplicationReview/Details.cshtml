@@ -1,0 +1,36 @@
+@model PropertyRentalSystem.Web.ViewModels.Review.ApplicationDetailsViewModel
+@{
+    ViewData["Title"] = $"Application #{Model.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>@ViewData["Title"]</h1>
+    <span class="badge bg-secondary fs-6">@Model.Status</span>
+</div>
+
+@await Component.InvokeAsync("ApplicationSummary", new { applicationId = Model.Id })
+
+<h4 class="mt-4">Status History</h4>
+<table class="table table-sm">
+    <thead>
+        <tr><th>Status</th><th>By</th><th>When</th><th>Comment</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var h in Model.History)
+        {
+            <tr>
+                <td>@h.Status</td>
+                <td>@h.ChangedByEmail</td>
+                <td>@h.ChangedAt.ToString("g")</td>
+                <td>@h.Comment</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.CanReview)
+{
+    <a href="#" class="btn btn-primary" data-modal-url="@Url.Action("ReviewConfirm", new { id = Model.Id })">Review</a>
+}
+
+<a asp-action="Index" class="btn btn-outline-secondary ms-2">Back to list</a>
