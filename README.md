@@ -2,6 +2,8 @@
 
 A full-stack web application built with ASP.NET Core MVC for property management companies to handle properties, units, rental applications, and lease agreements.
 
+**Demo video:** https://drive.google.com/file/d/17QuOJyUgS5mTu-RMuc09fBAAZJlvtEIL/view?usp=sharing
+
 ---
 
 ## Table of Contents
