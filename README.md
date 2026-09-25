@@ -12,6 +12,7 @@ A full-stack web application built with ASP.NET Core MVC for property management
 - [Getting Started & Installation](#getting-started--installation)
 - [Test Accounts](#test-accounts)
 - [Running Tests](#running-tests)
+- [Roadmap / Not Yet Implemented](#roadmap--not-yet-implemented)
 
 ---
 
@@ -21,7 +22,7 @@ A full-stack web application built with ASP.NET Core MVC for property management
 - **Database:** SQL Server / SQL Server Express
 - **Authentication & Authorization:** ASP.NET Identity (cookie-based auth with two roles: *Applicant* and *Property Manager*)
 - **Frontend:** Server-rendered Razor views, partial views, view components, Bootstrap 5, modals driven by a small fetch-based JS helper (`modal-forms.js`)
-- **Testing:** xUnit
+- **Testing:** xUnit, EF Core InMemory provider for service-layer tests
 - **Seed Data:** Bogus for .NET
 
 ---
@@ -55,6 +56,11 @@ A full-stack web application built with ASP.NET Core MVC for property management
     - Application lists are filtered by status and property with the filtering done in the database (`IQueryable.Where`), not in memory.
     - Applicants see only their own applications; property managers see all of them.
 
+6. **Layered Architecture:**
+    - Controllers stay thin: they translate HTTP/`ModelState` concerns into calls on a service and translate the result back into a view or a redirect. No EF Core or business logic lives in a controller.
+    - The **Services** layer (`Services/Properties`, `Services/Units`, `Services/Applications`, `Services/Review`) owns orchestration that touches the database — loading entities, invoking domain rules, and persisting changes — and reports outcomes through a shared `ServiceResult` / `ServiceResult<T>` type (a success flag plus field-scoped errors), kept deliberately decoupled from `ModelState` and MVC.
+    - The **Domain/Rules** layer (`Domain/Rules`) holds pure, DB-free static rule classes (`LeaseRules`, `UnitTypeRules`, `RentalApplicationRules`) that services call into — these are what the business-logic unit tests target directly.
+
 ---
 
 ## Project Structure
@@ -64,16 +70,29 @@ PropertyRentalSystem/
 │
 ├── PropertyRentalSystem.Web/
 │   ├── Controllers/                   # Properties, Units, Applications, ApplicationReview, Account, Home
-│   ├── Domain/Rules/                  # Pure, unit-tested business rules (lease availability,
-│   │                                  #   unit-type assignment, application status rules)
+│   │                                  #   — HTTP/ViewModel glue only, no EF Core or business logic
+│   ├── Domain/Rules/                  # Pure, DB-free, unit-tested business rules (lease availability,
+│   │                                  #   unit-type assignment, application status/editability rules)
+│   ├── Services/                      # DB-backed orchestration, grouped by feature, one interface + one
+│   │   ├── Properties/                #   implementation per folder; all return ServiceResult/ServiceResult<T>
+│   │   ├── Units/
+│   │   ├── Applications/              #   ApplicationBrowseService, ApplicationWizardService, ResidenceHistoryService
+│   │   ├── Review/                    #   ApplicationReviewService
+│   │   └── ServiceResult.cs           #   shared success/field-scoped-error result type
 │   ├── Data/                          # ApplicationDbContext, EF Core migrations, Bogus-based DbInitializer
 │   ├── Models/Domain/                 # Domain entities (Property, Unit, RentalApplication, Lease, etc.)
 │   ├── ViewComponents/                # UnitList, ApplicationSummary
 │   ├── ViewModels/                    # Per-feature view models (Account, Properties, Units, Applications, Review)
 │   └── Views/                         # Razor views and partials, incl. Views/Shared/Components for view components
 │
-├── PropertyRentalSystem.Tests/        # xUnit test project
-│   ├── Domain/Rules/                  # Tests for the business rules above
+├── PropertyRentalSystem.Tests/        # xUnit test project (99 tests)
+│   ├── Domain/Rules/                  # Tests for the pure business rules above
+│   ├── Services/                      # Boundary tests for each service, against EF Core InMemory
+│   │   ├── Properties/
+│   │   ├── Units/
+│   │   ├── Applications/
+│   │   ├── Review/
+│   │   └── TestDb.cs                  #   shared InMemory ApplicationDbContext factory
 │   └── ViewModels/                    # Tests for view-model validation (residence dates, review comment rules)
 │
 └── PropertyRentalSystem.sln
@@ -181,4 +200,30 @@ You can also register a new account from the sign-up page and pick either role.
 dotnet test
 ```
 
-The test project covers the business rules that live outside the controllers in `PropertyRentalSystem.Web/Domain/Rules/` (lease-availability dates, the inactive-unit-type assignment rule, application status/editability rules) plus the cross-field validation on the residence-history and review-decision forms.
+99 tests across three layers:
+- **`Domain/Rules`** — the pure business rules that live outside the controllers/services (lease-availability dates, the inactive-unit-type assignment rule, application status/editability rules).
+- **`Services`** — boundary tests for every service (`Properties`, `Units`, `Applications`, `Review`) against the EF Core InMemory provider: filtering, ownership/editability checks, the lease-creation-on-approval flow (including the "unit already has an active lease" rejection), wizard step transitions, and status-history recording.
+- **`ViewModels`** — cross-field validation on the residence-history and review-decision forms.
+
+---
+
+## Roadmap / Not Yet Implemented
+
+Everything in the tech spec's core requirements is implemented; the items below are the optional "bonus" enhancements it explicitly does not require, plus a couple of nuances worth being upfront about.
+
+- **Paging/sorting + JSON grid endpoint.** The application list is filtered in the database as required, but isn't paged or sorted, and isn't exposed as a documented JSON/OpenAPI endpoint behind a reusable grid view component.
+- **Review queue (claim/release).** A property manager can open and review any submitted application directly; there's no "Under Review" claim step to prevent two managers from working the same application at once.
+- **Property-manager-only private notes.** Not implemented — there's currently no field on an application that's writable by a manager and hidden from the applicant.
+- **Save-with-errors + Summary blocker list.** A section currently has to pass validation before it's persisted (per the core spec's "*Continue* validates, persists only when valid" rule). The bonus variant — save invalid data anyway, surface every blocking error on the Summary — isn't built.
+- **Multiple applicants per application.** An application has exactly one owning applicant today; the bonus's shared-ownership model, plus its optimistic-concurrency rule ("the second save to the same section is rejected as stale"), isn't implemented.
+
+### Real-time updates (SignalR)
+
+Not implemented, but worth addressing directly since it's easy to conflate with the multi-applicant bonus above: the tech spec explicitly says **"no real-time synchronisation is expected"** for that scenario, so skipping it there is by design, not an oversight.
+
+That said, SignalR would be a good fit *elsewhere* in this app, and adding it wouldn't conflict with the "no SPA framework" constraint — a SignalR hub is a transport layer bolted onto the existing server-rendered Razor pages, not a client-side app framework; the rendering model stays exactly as it is today. Two places it would genuinely help:
+
+- **The property-manager application list / review queue** — push a lightweight "a new application was submitted" or "application #123 was just claimed" event to connected managers, instead of requiring a manual refresh. This pairs naturally with the review-queue bonus above.
+- **An applicant's own application page** — notify the applicant in near real time when a manager finishes a review (Approved/Returned/Denied), rather than only surfacing the new status on next page load.
+
+Both are additive: a hub that broadcasts on the same events the relevant service (`ApplicationReviewService`, `ApplicationWizardService`) already raises when it changes status, with the Razor views subscribing via a small script to refresh just the affected fragment — the same "refresh the affected part of the page" pattern the modal-forms already use, just pushed instead of pulled. It would not be a good fit for masking the lack of real synchronization in the multi-applicant bonus, since SignalR delivers notifications, not conflict resolution — that still needs the optimistic-concurrency check the spec calls for.

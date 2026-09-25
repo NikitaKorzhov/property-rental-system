@@ -9,7 +9,44 @@ html {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #00a1f1;
+}
+
+/* Brand color. bg-primary/text-primary/border-primary/text-bg-primary and links read
+   --bs-primary(-rgb) straight from :root, but btn-primary/btn-outline-primary bake their own
+   colors into component-scoped custom properties per Bootstrap's compiled CSS, so those two
+   need their own override to actually pick up the new color (including hover/active/disabled). */
+:root {
+  --bs-primary: #00a1f1;
+  --bs-primary-rgb: 0, 161, 241;
+  --bs-link-color: #00a1f1;
+  --bs-link-color-rgb: 0, 161, 241;
+  --bs-link-hover-color: #0084c6;
+  --bs-link-hover-color-rgb: 0, 132, 198;
+}
+
+.btn-primary {
+  --bs-btn-bg: #00a1f1;
+  --bs-btn-border-color: #00a1f1;
+  --bs-btn-hover-bg: #0091d8;
+  --bs-btn-hover-border-color: #0091d8;
+  --bs-btn-active-bg: #0084c6;
+  --bs-btn-active-border-color: #0084c6;
+  --bs-btn-disabled-bg: #00a1f1;
+  --bs-btn-disabled-border-color: #00a1f1;
+  --bs-btn-focus-shadow-rgb: 0, 161, 241;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #00a1f1;
+  --bs-btn-border-color: #00a1f1;
+  --bs-btn-hover-bg: #00a1f1;
+  --bs-btn-hover-border-color: #00a1f1;
+  --bs-btn-active-bg: #00a1f1;
+  --bs-btn-active-border-color: #00a1f1;
+  --bs-btn-disabled-color: #00a1f1;
+  --bs-btn-disabled-border-color: #00a1f1;
+  --bs-btn-focus-shadow-rgb: 0, 161, 241;
 }
 
 html {
