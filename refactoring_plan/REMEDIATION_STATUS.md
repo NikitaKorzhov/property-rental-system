@@ -1,15 +1,15 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1 and 2 are done and merged to `main`; Phase 3 is done on `refactor/phase-3-centralize-validation` (committed, not yet pushed).
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1–3 are done and merged to `main`; Phase 4 is done on `refactor/phase-4-viewcomponent-services` (committed, not yet pushed).
 
 ## Summary
 
 | Phase | Rule(s) | Status | Progress |
 |---|---|---|---|
 | 1 — Translate non-English comments | 11 | ✅ Done (merged to main) | 2/2 |
-| 2 — Remove duplicated status checks from views | 2, 4 | ✅ Done (uncommitted) | 5/5 |
-| 3 — Centralize wizard validation | 8 | ✅ Done (committed, not pushed) | 6/6 |
-| 4 — Move ViewComponent queries into services | 3, 10 | ⬜ Not started | 0/3 |
+| 2 — Remove duplicated status checks from views | 2, 4 | ✅ Done (merged to main) | 5/5 |
+| 3 — Centralize wizard validation | 8 | ✅ Done (merged to main) | 6/6 |
+| 4 — Move ViewComponent queries into services | 3, 10 | ✅ Done (committed, not pushed) | 3/3 |
 | 5 — Project to ViewModels at the boundary | 9 | ⬜ Not started | 0/5 |
 | 6 — Resolve folder/namespace boundaries | 7 | ⬜ Not started | 0/3 |
 
@@ -70,21 +70,21 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 ## Phase 4 — Move ViewComponent queries into services (Rules 3 & 10)
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done — split across 2 commits on `refactor/phase-4-viewcomponent-services` (not yet pushed), one per component, since the two are fully independent.
 
-- [ ] Add `GetUnitsForPropertyAsync(int propertyId)` to `IUnitService`/`UnitService`, moving `UnitListViewComponent`'s query; update the component to call the service and drop its `ApplicationDbContext` dependency.
-- [ ] Decide the home for the application-summary query (it's used by both `Applications/Wizard.cshtml` and `ApplicationReview/Details.cshtml`, so it needs a neutral service, not `IApplicationWizardService` alone) and move `ApplicationSummaryViewComponent`'s query there; update the component to call it and drop its `ApplicationDbContext` dependency.
-- [ ] Add service-level tests for both new methods against EF Core InMemory.
+- [x] Add `GetUnitsForPropertyAsync(int propertyId)` to `IUnitService`/`UnitService`, moving `UnitListViewComponent`'s query verbatim (same single-JOIN SQL, confirmed via EF Core query logs); update the component to call the service and drop its `ApplicationDbContext` dependency.
+- [x] Decide the home for the application-summary query — added a new `IApplicationSummaryService`/`ApplicationSummaryService` rather than bolting it onto `IApplicationWizardService` (Applicant-only) or `IApplicationBrowseService` (mismatched responsibility), since it's used by both `Applications/Wizard.cshtml` and `ApplicationReview/Details.cshtml`. Also upgraded the query itself from `.Include()` + in-memory mapping to a genuine single `.Select()` projection (Rule 9) — confirmed via EF Core query logs to still be one SQL statement (`LEFT JOIN` to `ResidenceHistories`), not N+1. Registered in `Program.cs`. Updated the component to call it and drop its `ApplicationDbContext` dependency.
+- [x] Add service-level tests for both new methods against EF Core InMemory (2 for `GetUnitsForPropertyAsync`, 3 for `GetSummaryAsync`).
 
-**Verified current state:** both `UnitListViewComponent.cs` and `ApplicationSummaryViewComponent.cs` still inject `ApplicationDbContext` directly and query it in `InvokeAsync` — unchanged since the audit.
+**Verified current state:** `dotnet build`: 0 warnings/0 errors. `dotnet test`: 108/108 passing (105 + 3 new; the 2 `UnitService` tests landed in commit 1, pushing it to 105 first). Manually checked against a running instance after *each* commit: Properties page (unit list), the applicant's Wizard Summary step, and the manager's Review Details page all render identical data to before. EF Core query logs inspected after each commit to confirm no N+1 was introduced — both new methods still produce exactly one SQL statement per call.
 
-**Notes:** —
+**Notes:** Neither `ViewComponent` is grouped by feature yet (still flat in `ViewComponents/`) — that part of Rule 7 is still open, tracked in Phase 6.
 
 ---
 
 ## Phase 5 — Project to ViewModels at the boundary (Rule 9)
 
-**Status:** ⬜ Not started — **blocked on Phase 2** for the `GetMyApplicationsAsync` item (needs `IsEditable`/`CanWithdraw` to already exist on `ApplicationListItemViewModel`).
+**Status:** ⬜ Not started — no longer blocked (Phases 2 and 4 are both done, so `IsEditable`/`CanWithdraw` already exist on `ApplicationListItemViewModel`, and `UnitListViewComponent`/`ApplicationSummaryViewComponent` are no longer part of this phase's scope — see the note in Phase 4).
 
 - [ ] `IPropertyService.GetAllAsync()` → project to a minimal `Id`+`Name` shape; update the three call sites (`PropertiesController.LoadListAsync`, `ApplicationsController.Index`/`Browse`, `ApplicationReviewController.Index`).
 - [ ] `IApplicationBrowseService.GetAvailableUnitsAsync(...)` → project to `BrowseUnitViewModel` (composing `ExistingApplicationId` in the controller as today).

@@ -163,4 +163,40 @@ public class UnitServiceTests
 
         Assert.True(result.Succeeded);
     }
+
+    [Fact]
+    public async Task GetUnitsForPropertyAsync_ReturnsOnlyThatPropertysUnits_OrderedByUnitNumber()
+    {
+        await using var db = TestDb.Create();
+        var (property, active, _) = await SeedAsync(db);
+        var otherProperty = new Property { Name = "P2", Address = "2 St" };
+        db.Properties.Add(otherProperty);
+        await db.SaveChangesAsync();
+        db.Units.AddRange(
+            new Unit { PropertyId = property.Id, UnitNumber = "102", UnitTypeId = active.Id, Bedrooms = 1, MonthlyRent = 900m },
+            new Unit { PropertyId = property.Id, UnitNumber = "101", UnitTypeId = active.Id, Bedrooms = 2, MonthlyRent = 1200m },
+            new Unit { PropertyId = otherProperty.Id, UnitNumber = "201", UnitTypeId = active.Id, Bedrooms = 1, MonthlyRent = 800m });
+        await db.SaveChangesAsync();
+        var service = new UnitService(db);
+
+        var result = await service.GetUnitsForPropertyAsync(property.Id);
+
+        Assert.Equal(new[] { "101", "102" }, result.Select(u => u.UnitNumber));
+    }
+
+    [Fact]
+    public async Task GetUnitsForPropertyAsync_MapsUnitTypeNameAndActiveFlag()
+    {
+        await using var db = TestDb.Create();
+        var (property, _, inactive) = await SeedAsync(db);
+        db.Units.Add(new Unit { PropertyId = property.Id, UnitNumber = "101", UnitTypeId = inactive.Id, Bedrooms = 2, MonthlyRent = 1200m });
+        await db.SaveChangesAsync();
+        var service = new UnitService(db);
+
+        var result = await service.GetUnitsForPropertyAsync(property.Id);
+
+        var unit = Assert.Single(result);
+        Assert.Equal("2-Bedroom", unit.UnitTypeName);
+        Assert.False(unit.UnitTypeIsActive);
+    }
 }

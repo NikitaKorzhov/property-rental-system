@@ -46,6 +46,7 @@ builder.Services.AddScoped<IPropertyService, PropertyService>();
 builder.Services.AddScoped<IUnitService, UnitService>();
 builder.Services.AddScoped<IApplicationBrowseService, ApplicationBrowseService>();
 builder.Services.AddScoped<IApplicationWizardService, ApplicationWizardService>();
+builder.Services.AddScoped<IApplicationSummaryService, ApplicationSummaryService>();
 builder.Services.AddScoped<IResidenceHistoryService, ResidenceHistoryService>();
 builder.Services.AddScoped<IApplicationReviewService, ApplicationReviewService>();
 

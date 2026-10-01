@@ -1,5 +1,6 @@
 using PropertyRentalSystem.Web.Models.Domain;
 using PropertyRentalSystem.Web.Services;
+using PropertyRentalSystem.Web.ViewModels.Units;
 
 namespace PropertyRentalSystem.Web.Services.Units;
 
@@ -7,6 +8,10 @@ public interface IUnitService
 {
     Task<Unit?> GetByIdAsync(int id);
     Task<bool> PropertyExistsAsync(int propertyId);
+
+    // Display-ready unit list for a property's detail view — projected straight to the
+    // ViewModel here, not returned as entities (Rule 9).
+    Task<List<UnitListItemViewModel>> GetUnitsForPropertyAsync(int propertyId);
 
     // Active unit types plus, when editing, the unit's own current type even if it has since
     // gone inactive — so it still displays as an option (per the inactive-type rule).

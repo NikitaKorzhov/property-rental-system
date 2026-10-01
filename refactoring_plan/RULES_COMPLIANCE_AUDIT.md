@@ -8,14 +8,14 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 |---|---|
 | 1. Skinny Controllers | ✅ Compliant |
 | 2. Business Logic in Services | ✅ Fixed (Phase 2) |
-| 3. Separate Data Access | ⚠️ Partial violations |
+| 3. Separate Data Access | ✅ Fixed (Phase 4) |
 | 4. Clean Razor Views | ✅ Fixed (Phase 2) |
 | 5. DTOs / Type Safety | ✅ Compliant |
 | 6. Strangler-Fig Refactoring | ➖ Not applicable to a static snapshot |
 | 7. Folder / Module Boundaries | ❌ Violations found |
 | 8. Centralized Validation | ✅ Fixed (Phase 3) |
 | 9. Project to ViewModels at the Boundary | ❌ Systemic violations found |
-| 10. Services Own `DbContext` | ❌ Violations found |
+| 10. Services Own `DbContext` | ✅ Fixed (Phase 4) |
 | 11. Codebase Hygiene & Consistency | ✅ Fixed (Phase 1) |
 | 12. Short, Purpose-Focused Comments | ✅ Compliant |
 
@@ -31,9 +31,9 @@ Originally found: the application-status "open"/"editable" business rule (`Domai
 
 **Related finding, now also fixed:** `ApplicationWizardService.SaveApplicantInfoAsync` used to hand-roll required-field and email-format checks instead of expressing them as `DataAnnotations` on `ApplicationWizardViewModel` the way every other form in the app does — Phase 2 didn't touch this, but Phase 3 did; see Rule 8 below.
 
-## 3. Separate Data Access — ⚠️ Partial violations
+## 3. Separate Data Access — ✅ Fixed (Phase 4)
 
-See Rule 10 below (same underlying finding, from the data-access-layering angle): `UnitListViewComponent` and `ApplicationSummaryViewComponent` query `ApplicationDbContext` directly rather than through a service, which is a direct-DbContext-access path outside the layer Rule 3 reserves for it. Controllers themselves are clean (see Rule 1).
+See Rule 10 below (same underlying finding, from the data-access-layering angle, now fixed) — `UnitListViewComponent` and `ApplicationSummaryViewComponent` used to query `ApplicationDbContext` directly rather than through a service. Controllers were already clean (see Rule 1); view components now are too.
 
 ## 4. Keep Razor Views Clean — ✅ Fixed (Phase 2)
 
@@ -78,11 +78,16 @@ Read paths that exist purely to back a list/summary/history view, and are never 
 
 **Not a violation:** `GetByIdAsync`/`GetOwnedAsync`/`GetReviewableAsync`-style single-entity reads (`PropertiesController.Edit`, `UnitsController.Edit`, `ApplicationsController.Wizard`, `ApplicationReviewController.Review`, etc.) are legitimately entities — they're loaded immediately before an `Update`/`Delete`/status-transition call, and EF Core needs the tracked instance for that to work. Only the list/history reads in the table above are in scope for this rule.
 
-## 10. Services Own `DbContext`, Not ViewComponents — ❌ Violations found
+## 10. Services Own `DbContext`, Not ViewComponents — ✅ Fixed (Phase 4)
 
 (Documented in `ARCHITECTURE_RULES.md` §10; restated here for completeness.)
 
-`UnitListViewComponent` (`ViewComponents/UnitListViewComponent.cs:9-16`) and `ApplicationSummaryViewComponent` (`ViewComponents/ApplicationSummaryViewComponent.cs:12-18`) both have `ApplicationDbContext` injected directly into the constructor and query it themselves inside `InvokeAsync`, bypassing the Services layer entirely. This is the one place in the codebase where the Rule 3 data-access boundary isn't actually held — controllers hold it correctly (see Rule 1), view components don't.
+Originally found: `UnitListViewComponent` and `ApplicationSummaryViewComponent` both had `ApplicationDbContext` injected directly into the constructor and queried it themselves inside `InvokeAsync`, bypassing the Services layer entirely — the one place in the codebase where the Rule 3 data-access boundary wasn't held (controllers were already clean, see Rule 1).
+
+- `UnitListViewComponent` now calls `IUnitService.GetUnitsForPropertyAsync(propertyId)` — the existing single-query projection moved into `UnitService` verbatim (same SQL: one `INNER JOIN` to `UnitTypes`, confirmed via EF Core query logs — no N+1).
+- `ApplicationSummaryViewComponent` now calls a new `IApplicationSummaryService.GetSummaryAsync(applicationId)`. This one needed a home that isn't role-specific, since the component is used by both the applicant's wizard Summary step *and* the manager's review details page — `IApplicationWizardService` wasn't a fit (Applicant-flow-only), so a new interface was added rather than overloading an existing one with a mismatched responsibility. The query was also upgraded from the old `.Include(...)` + in-memory mapping to a genuine single `.Select()` projection straight to `ApplicationSummaryViewModel` (applying Rule 9 properly here, not just relocating the weaker pattern) — confirmed via EF Core query logs to still be one SQL statement (a `LEFT JOIN` to `ResidenceHistories`), not N+1.
+
+Both moves added service-level tests that didn't exist before (the logic was previously untestable outside the ASP.NET pipeline) — a net increase in coverage, not just a relocation.
 
 ## 11. Codebase Hygiene & Consistency — ✅ Fixed (Phase 1)
 
@@ -103,6 +108,6 @@ This list reflects `REMEDIATION_PLAN.md`'s phase order, which refined this order
 1. ✅ **Rule 11** (translate the Ukrainian comments in `AccountController.cs`, and `Dockerfile`, to English) — done in Phase 1, merged to `main`.
 2. ✅ **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to `ApplicationListItemViewModel`/`ApplicationWizardViewModel`, update the three view call sites) — done in Phase 2, merged to `main`.
 3. ✅ **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — done in Phase 3, on `refactor/phase-3-centralize-validation` (committed, not yet pushed).
-4. **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a neutral service) — closes the one data-access-boundary gap, which is also Rule 3's only open finding. Not started.
-5. **Rule 9** (project the five listed read paths straight to their ViewModels in the service query, following `UnitListViewComponent`'s existing pattern) — do this after Rule 2 (done) and after Rule 10, since the `GetMyApplicationsAsync` projection needs the `IsEditable`/`CanWithdraw` fields that now exist, and two of the queries in scope are moving out of view components as part of the Rule 10 fix anyway. Not started.
+4. ✅ **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a new `IApplicationSummaryService`) — done in Phase 4, on `refactor/phase-4-viewcomponent-services` (committed, not yet pushed). Also closed Rule 3's only open finding.
+5. **Rule 9** (project the five listed read paths straight to their ViewModels in the service query, following `UnitListViewComponent`'s existing pattern) — do this after Rule 2 (done) and after Rule 10 (done), since the `GetMyApplicationsAsync` projection needs the `IsEditable`/`CanWithdraw` fields that now exist. Not started.
 6. **Rule 7** (resolve the "Domain" naming collision, group `ViewComponents` by feature) — a rename/move, best done last since it touches the most file paths and should land on a clean diff. Not started.
