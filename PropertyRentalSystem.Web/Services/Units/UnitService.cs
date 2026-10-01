@@ -46,7 +46,9 @@ public class UnitService : IUnitService
     {
         var errors = await ValidateAsync(propertyId, unitNumber, unitTypeId, currentUnitTypeId: null, currentUnitId: null);
         if (errors.Count > 0)
+        {
             return ServiceResult<Unit>.Fail(errors);
+        }
 
         var unit = new Unit
         {
@@ -65,7 +67,9 @@ public class UnitService : IUnitService
     {
         var errors = await ValidateAsync(unit.PropertyId, unitNumber, unitTypeId, currentUnitTypeId: unit.UnitTypeId, currentUnitId: unit.Id);
         if (errors.Count > 0)
+        {
             return ServiceResult.Fail(errors);
+        }
 
         unit.UnitNumber = unitNumber;
         unit.Bedrooms = bedrooms;
@@ -82,7 +86,9 @@ public class UnitService : IUnitService
         var hasApplications = await _db.RentalApplications.AnyAsync(a => a.UnitId == unit.Id);
         var hasLease = await _db.Leases.AnyAsync(l => l.UnitId == unit.Id);
         if (hasApplications || hasLease)
+        {
             return ServiceResult.Fail("Can't delete a unit that has applications or a lease against it.");
+        }
 
         _db.Units.Remove(unit);
         await _db.SaveChangesAsync();
@@ -105,14 +111,18 @@ public class UnitService : IUnitService
 
         var candidateIsActive = await _db.UnitTypes.AnyAsync(t => t.Id == unitTypeId && t.IsActive);
         if (!UnitTypeRules.CanAssign(candidateIsActive, unitTypeId, currentUnitTypeId))
+        {
             errors.Add(new ServiceError("UnitTypeId", "This unit type is inactive and can't be assigned."));
+        }
 
         var duplicateNumber = await _db.Units.AnyAsync(u =>
             u.PropertyId == propertyId &&
             u.UnitNumber == unitNumber &&
             (!currentUnitId.HasValue || u.Id != currentUnitId.Value));
         if (duplicateNumber)
+        {
             errors.Add(new ServiceError("UnitNumber", "This property already has a unit with this number."));
+        }
 
         return errors;
     }

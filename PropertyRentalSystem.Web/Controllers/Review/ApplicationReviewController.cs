@@ -62,7 +62,10 @@ public class ApplicationReviewController : ModalFormControllerBase
     public async Task<IActionResult> ReviewConfirm(int id)
     {
         var application = await _review.GetReviewableAsync(id);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("_ReviewForm", new ReviewFormViewModel { Id = id });
     }
@@ -71,16 +74,24 @@ public class ApplicationReviewController : ModalFormControllerBase
     public async Task<IActionResult> Review(ReviewFormViewModel model)
     {
         var application = await _review.GetReviewableAsync(model.Id);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         if (!ModelState.IsValid)
+        {
             return PartialView("_ReviewForm", model);
+        }
 
         var result = await _review.ReviewAsync(application, model.Outcome!.Value, model.Comment, CurrentUserId);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
+            {
                 ModelState.AddModelError(error.Field, error.Message);
+            }
+
             return PartialView("_ReviewForm", model);
         }
 

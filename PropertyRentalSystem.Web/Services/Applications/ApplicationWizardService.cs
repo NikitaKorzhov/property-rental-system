@@ -21,9 +21,14 @@ public class ApplicationWizardService : IApplicationWizardService
             .Where(a => a.ApplicantId == applicantId);
 
         if (status.HasValue)
+        {
             query = query.Where(a => a.Status == status.Value);
+        }
+
         if (propertyId.HasValue)
+        {
             query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
+        }
 
         var applications = await query
             .OrderByDescending(a => a.Id)
@@ -61,10 +66,20 @@ public class ApplicationWizardService : IApplicationWizardService
     public WizardStep DetermineStep(RentalApplication application)
     {
         if (!RentalApplicationRules.IsEditable(application.Status))
+        {
             return WizardStep.Summary;
+        }
 
-        if (!application.IsApplicantInfoComplete) return WizardStep.ApplicantInfo;
-        if (!application.IsResidenceHistoryComplete) return WizardStep.ResidenceHistory;
+        if (!application.IsApplicantInfoComplete)
+        {
+            return WizardStep.ApplicantInfo;
+        }
+
+        if (!application.IsResidenceHistoryComplete)
+        {
+            return WizardStep.ResidenceHistory;
+        }
+
         return WizardStep.ApplicantInfo;
     }
 
@@ -78,7 +93,9 @@ public class ApplicationWizardService : IApplicationWizardService
     public async Task<string?> GetReviewCommentAsync(RentalApplication application)
     {
         if (application.Status is not (ApplicationStatus.Returned or ApplicationStatus.Denied))
+        {
             return null;
+        }
 
         return await _db.ApplicationStatusHistories
             .Where(h => h.RentalApplicationId == application.Id && h.Status == application.Status)
@@ -91,7 +108,9 @@ public class ApplicationWizardService : IApplicationWizardService
         RentalApplication application, string fullName, string phone, string email, string currentAddress)
     {
         if (!RentalApplicationRules.IsEditable(application.Status))
+        {
             return ServiceResult.Fail("This application can no longer be edited.");
+        }
 
         application.FullName = fullName.Trim();
         application.Phone = phone.Trim();
@@ -105,7 +124,9 @@ public class ApplicationWizardService : IApplicationWizardService
     public async Task<ServiceResult> CompleteResidenceHistoryAsync(RentalApplication application)
     {
         if (!RentalApplicationRules.IsEditable(application.Status))
+        {
             return ServiceResult.Fail("This application can no longer be edited.");
+        }
 
         application.IsResidenceHistoryComplete = true;
         await _db.SaveChangesAsync();
@@ -115,10 +136,14 @@ public class ApplicationWizardService : IApplicationWizardService
     public async Task<ServiceResult> SubmitAsync(RentalApplication application, string userId)
     {
         if (!RentalApplicationRules.IsEditable(application.Status))
+        {
             return ServiceResult.Fail("This application can no longer be edited.");
+        }
 
         if (!RentalApplicationRules.CanSubmit(application.IsApplicantInfoComplete, application.IsResidenceHistoryComplete))
+        {
             return ServiceResult.Fail("Complete both sections before submitting.");
+        }
 
         var today = DateTime.UtcNow.Date;
         var hasActiveLease = await _db.Leases
@@ -144,7 +169,9 @@ public class ApplicationWizardService : IApplicationWizardService
     public async Task<ServiceResult> WithdrawAsync(RentalApplication application, string userId)
     {
         if (!RentalApplicationRules.IsOpen(application.Status))
+        {
             return ServiceResult.Fail("This application can no longer be withdrawn.");
+        }
 
         application.Status = ApplicationStatus.Withdrawn;
         _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory

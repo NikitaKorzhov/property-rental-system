@@ -24,7 +24,9 @@ public class UnitsController : ModalFormControllerBase
     public async Task<IActionResult> Create(int propertyId)
     {
         if (!await _units.PropertyExistsAsync(propertyId))
+        {
             return NotFound();
+        }
 
         var model = new UnitFormViewModel { PropertyId = propertyId };
         await PopulateUnitTypesAsync(model, currentUnitTypeId: null);
@@ -38,7 +40,10 @@ public class UnitsController : ModalFormControllerBase
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
+            {
                 ModelState.AddModelError(error.Field, error.Message);
+            }
+
             await PopulateUnitTypesAsync(model, currentUnitTypeId: null);
             return PartialView("_UnitForm", model);
         }
@@ -50,7 +55,10 @@ public class UnitsController : ModalFormControllerBase
     public async Task<IActionResult> Edit(int id)
     {
         var unit = await _units.GetByIdAsync(id);
-        if (unit == null) return NotFound();
+        if (unit == null)
+        {
+            return NotFound();
+        }
 
         var model = new UnitFormViewModel
         {
@@ -68,16 +76,25 @@ public class UnitsController : ModalFormControllerBase
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, UnitFormViewModel model)
     {
-        if (id != model.Id) return BadRequest();
+        if (id != model.Id)
+        {
+            return BadRequest();
+        }
 
         var unit = await _units.GetByIdAsync(id);
-        if (unit == null) return NotFound();
+        if (unit == null)
+        {
+            return NotFound();
+        }
 
         var result = await _units.UpdateAsync(unit, model.UnitNumber, model.Bedrooms, model.MonthlyRent, model.UnitTypeId);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
+            {
                 ModelState.AddModelError(error.Field, error.Message);
+            }
+
             await PopulateUnitTypesAsync(model, currentUnitTypeId: unit.UnitTypeId);
             return PartialView("_UnitForm", model);
         }
@@ -89,7 +106,10 @@ public class UnitsController : ModalFormControllerBase
     public async Task<IActionResult> DeleteConfirm(int id)
     {
         var unit = await _units.GetByIdAsync(id);
-        if (unit == null) return NotFound();
+        if (unit == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", BuildDeleteConfirmModel(unit));
     }
@@ -98,13 +118,19 @@ public class UnitsController : ModalFormControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var unit = await _units.GetByIdAsync(id);
-        if (unit == null) return NotFound();
+        if (unit == null)
+        {
+            return NotFound();
+        }
 
         var result = await _units.DeleteAsync(unit);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
+            {
                 ModelState.AddModelError(error.Field, error.Message);
+            }
+
             return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", BuildDeleteConfirmModel(unit));
         }
 

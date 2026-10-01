@@ -23,13 +23,24 @@ public class ApplicationBrowseService : IApplicationBrowseService
             .Where(u => !_db.Leases.Where(l => l.UnitId == u.Id).Any(LeaseRules.IsActiveOn(today)));
 
         if (propertyId.HasValue)
+        {
             query = query.Where(u => u.PropertyId == propertyId.Value);
+        }
+
         if (unitTypeId.HasValue)
+        {
             query = query.Where(u => u.UnitTypeId == unitTypeId.Value);
+        }
+
         if (bedrooms.HasValue)
+        {
             query = query.Where(u => u.Bedrooms == bedrooms.Value);
+        }
+
         if (maxRent.HasValue)
+        {
             query = query.Where(u => u.MonthlyRent <= maxRent.Value);
+        }
 
         return await query
             .OrderBy(u => u.Property.Name).ThenBy(u => u.UnitNumber)
@@ -73,7 +84,9 @@ public class ApplicationBrowseService : IApplicationBrowseService
         var existing = await _db.RentalApplications.FirstOrDefaultAsync(a =>
             a.ApplicantId == applicantId && a.UnitId == unit.Id && RentalApplicationRules.OpenStatuses.Contains(a.Status));
         if (existing != null)
+        {
             return ServiceResult<RentalApplication>.Success(existing);
+        }
 
         var application = new RentalApplication
         {

@@ -39,7 +39,9 @@ public class PropertiesController : ModalFormControllerBase
     public async Task<IActionResult> Create(PropertyFormViewModel model)
     {
         if (!ModelState.IsValid)
+        {
             return PartialView("_PropertyForm", model);
+        }
 
         await _properties.CreateAsync(model.Name, model.Address);
         return FormSuccess();
@@ -49,7 +51,10 @@ public class PropertiesController : ModalFormControllerBase
     public async Task<IActionResult> Edit(int id)
     {
         var property = await _properties.GetByIdAsync(id);
-        if (property == null) return NotFound();
+        if (property == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("_PropertyForm", new PropertyFormViewModel
         {
@@ -62,12 +67,21 @@ public class PropertiesController : ModalFormControllerBase
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, PropertyFormViewModel model)
     {
-        if (id != model.Id) return BadRequest();
+        if (id != model.Id)
+        {
+            return BadRequest();
+        }
+
         if (!ModelState.IsValid)
+        {
             return PartialView("_PropertyForm", model);
+        }
 
         var property = await _properties.GetByIdAsync(id);
-        if (property == null) return NotFound();
+        if (property == null)
+        {
+            return NotFound();
+        }
 
         await _properties.UpdateAsync(property, model.Name, model.Address);
         return FormSuccess();
@@ -77,7 +91,10 @@ public class PropertiesController : ModalFormControllerBase
     public async Task<IActionResult> DeleteConfirm(int id)
     {
         var property = await _properties.GetByIdAsync(id);
-        if (property == null) return NotFound();
+        if (property == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", BuildDeleteConfirmModel(property));
     }
@@ -86,14 +103,20 @@ public class PropertiesController : ModalFormControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var property = await _properties.GetByIdAsync(id);
-        if (property == null) return NotFound();
+        if (property == null)
+        {
+            return NotFound();
+        }
 
         var result = await _properties.DeleteAsync(property);
         if (!result.Succeeded)
         {
             // Re-render the same confirm partial with the error, same as a failed Create/Edit.
             foreach (var error in result.Errors)
+            {
                 ModelState.AddModelError(error.Field, error.Message);
+            }
+
             return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", BuildDeleteConfirmModel(property));
         }
 

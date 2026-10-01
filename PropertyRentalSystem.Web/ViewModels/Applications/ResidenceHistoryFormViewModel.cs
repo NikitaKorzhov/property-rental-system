@@ -31,6 +31,8 @@ public class ResidenceHistoryFormViewModel : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (MoveOutDate < MoveInDate)
+        {
             yield return new ValidationResult("Move-out date can't be before the move-in date.", new[] { nameof(MoveOutDate) });
+        }
     }
 }

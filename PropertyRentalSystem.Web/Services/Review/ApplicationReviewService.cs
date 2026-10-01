@@ -20,9 +20,14 @@ public class ApplicationReviewService : IApplicationReviewService
         var query = _db.RentalApplications.AsQueryable();
 
         if (status.HasValue)
+        {
             query = query.Where(a => a.Status == status.Value);
+        }
+
         if (propertyId.HasValue)
+        {
             query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
+        }
 
         return await query
             .OrderByDescending(a => a.Id)
@@ -71,7 +76,9 @@ public class ApplicationReviewService : IApplicationReviewService
     {
         // Controllers reject posts that are not allowed: only a Submitted application can be reviewed.
         if (application.Status != ApplicationStatus.Submitted)
+        {
             return ServiceResult.Fail("This application can no longer be reviewed.");
+        }
 
         switch (outcome)
         {
