@@ -1,13 +1,13 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: no phase has been started yet.
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1 and 2 are done (Phase 1 merged to `main`; Phase 2 done on `refactor/phase-2-dedupe-status-checks`, uncommitted).
 
 ## Summary
 
 | Phase | Rule(s) | Status | Progress |
 |---|---|---|---|
-| 1 — Translate non-English comments | 11 | ✅ Done (uncommitted) | 2/2 |
-| 2 — Remove duplicated status checks from views | 2, 4 | ⬜ Not started | 0/5 |
+| 1 — Translate non-English comments | 11 | ✅ Done (merged to main) | 2/2 |
+| 2 — Remove duplicated status checks from views | 2, 4 | ✅ Done (uncommitted) | 5/5 |
 | 3 — Centralize wizard validation | 8 | ⬜ Not started | 0/5 |
 | 4 — Move ViewComponent queries into services | 3, 10 | ⬜ Not started | 0/3 |
 | 5 — Project to ViewModels at the boundary | 9 | ⬜ Not started | 0/5 |
@@ -35,15 +35,17 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 ## Phase 2 — Remove duplicated status-rule checks from views (Rules 2 & 4)
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done — changes made in the working tree on `refactor/phase-2-dedupe-status-checks`, not yet committed.
 
-- [ ] Add `IsEditable` and `CanWithdraw` (`bool`) to `ViewModels/Applications/ApplicationListItemViewModel.cs`.
-- [ ] Add `CanWithdraw` (`bool`) to `ViewModels/Applications/ApplicationWizardViewModel.cs`.
-- [ ] `ApplicationsController.Index` — set both fields when projecting `ApplicationListItemViewModel`.
-- [ ] `ApplicationsController.BuildViewModel` — set `CanWithdraw`.
-- [ ] Update `Views/Applications/Index.cshtml` and `Views/Applications/Wizard.cshtml` to read the new properties instead of the inline `ApplicationStatus is ...` conditions.
+- [x] Add `IsEditable` and `CanWithdraw` (`bool`) to `ViewModels/Applications/ApplicationListItemViewModel.cs`.
+- [x] Add `CanWithdraw` (`bool`) to `ViewModels/Applications/ApplicationWizardViewModel.cs`.
+- [x] `ApplicationsController.Index` — set both fields when projecting `ApplicationListItemViewModel`.
+- [x] `ApplicationsController.BuildViewModel` — set `CanWithdraw`.
+- [x] Update `Views/Applications/Index.cshtml` and `Views/Applications/Wizard.cshtml` to read the new properties instead of the inline `ApplicationStatus is ...` conditions.
 
-**Verified current state:** `ApplicationListItemViewModel` has no `IsEditable`/`CanWithdraw` properties yet; `ApplicationWizardViewModel` still only has `IsEditable` (no `CanWithdraw`). The three inline status-membership checks are still present verbatim in `Wizard.cshtml:66` and `Index.cshtml:65,67`.
+**Verified current state:** `ApplicationListItemViewModel` now has `IsEditable`/`CanWithdraw`; `ApplicationWizardViewModel` now has `CanWithdraw` alongside `IsEditable`. Both views read the new properties — no inline `ApplicationStatus is ...` status-membership checks remain anywhere in `Views/Applications/`. `Index.cshtml`'s now-unused `@using PropertyRentalSystem.Web.Models.Domain` was also removed; `Wizard.cshtml` keeps its `@using` since it still uses `ApplicationStatus.Denied` for a purely presentational label/color choice (not a business-rule duplication, per the audit). `dotnet build`: 0 warnings/0 errors. `dotnet test`: 99/99 passing.
+
+**Notes:** Uncommitted by request — stage and commit when ready. No new tests were added for the `IsEditable`/`CanWithdraw` mapping (the plan calls this optional); consider adding them before or alongside the commit.
 
 **Notes:** —
 

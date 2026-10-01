@@ -51,7 +51,9 @@ public class ApplicationsController : ModalFormControllerBase
                     Id = a.Id,
                     PropertyName = a.Unit.Property.Name,
                     UnitNumber = a.Unit.UnitNumber,
-                    Status = a.Status
+                    Status = a.Status,
+                    IsEditable = RentalApplicationRules.IsEditable(a.Status),
+                    CanWithdraw = RentalApplicationRules.IsOpen(a.Status)
                 })
                 .ToList(),
             SelectedStatus = status,
@@ -338,6 +340,7 @@ public class ApplicationsController : ModalFormControllerBase
             Step = step,
             Status = application.Status,
             IsEditable = RentalApplicationRules.IsEditable(application.Status),
+            CanWithdraw = RentalApplicationRules.IsOpen(application.Status),
             CanSubmit = application.IsApplicantInfoComplete && application.IsResidenceHistoryComplete,
             PropertyName = application.Unit.Property.Name,
             UnitNumber = application.Unit.UnitNumber,
