@@ -14,7 +14,7 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 | 6. Strangler-Fig Refactoring | ➖ Not applicable to a static snapshot |
 | 7. Folder / Module Boundaries | ❌ Violations found |
 | 8. Centralized Validation | ✅ Fixed (Phase 3) |
-| 9. Project to ViewModels at the Boundary | ❌ Systemic violations found |
+| 9. Project to ViewModels at the Boundary | ✅ Fixed (Phase 5) |
 | 10. Services Own `DbContext` | ✅ Fixed (Phase 4) |
 | 11. Codebase Hygiene & Consistency | ✅ Fixed (Phase 1) |
 | 12. Short, Purpose-Focused Comments | ✅ Compliant |
@@ -62,21 +62,21 @@ Originally found: `RegisterViewModel`, `LoginViewModel`, `PropertyFormViewModel`
 
 **Why this fix landed in 2 commits instead of 1** (unlike every other single-commit phase so far): relocating validation across layers has a window where splitting it wrong leaves data completely unvalidated — e.g. removing the service's checks *before* the ViewModel/controller side existed would let invalid data save silently, since nothing would be checking it. The safe split is additive-first: commit 1 added the `DataAnnotations` + the controller's `ModelState.IsValid` guard, with the old service checks left in place (now redundant — the controller short-circuits before reaching them — but harmless); commit 2 removed the now-provably-dead service code once the new path was verified both by the test suite and manually against a running instance. Each commit left the app in a fully working state.
 
-## 9. Project to ViewModels/DTOs at the Data-Access Boundary — ❌ Systemic violations found
+## 9. Project to ViewModels/DTOs at the Data-Access Boundary — ✅ Fixed (Phase 5)
 
-`ARCHITECTURE_RULES.md` §9 names two methods as examples; a full pass over every service interface shows the pattern is systemic — **every** service interface returns full domain entities, and the controller does the entity → ViewModel mapping afterward. The clear instance of doing it correctly is `UnitListViewComponent`, which projects straight into `UnitListItemViewModel` inside the EF Core query (`.Select(u => new UnitListItemViewModel {...})`) — that's the pattern to copy.
+`ARCHITECTURE_RULES.md` §9 originally named two methods as examples; a full pass found the pattern was systemic across every service interface. All five in-scope read paths now project straight to their ViewModel in the query:
 
-Read paths that exist purely to back a list/summary/history view, and are never used for further mutation, so projecting them to a ViewModel directly in the query would lose nothing:
-
-| Service method | Returns | Only ever used for |
+| Service method | Now returns | Consumer |
 |---|---|---|
-| `IPropertyService.GetAllAsync()` | `List<Property>` | An `Id`+`Name` list/dropdown in `PropertiesController.LoadListAsync`, `ApplicationsController.Index/Browse`, `ApplicationReviewController.Index` |
-| `IApplicationBrowseService.GetAvailableUnitsAsync(...)` | `List<Unit>` (+ `Property`, `UnitType` navigation) | `ApplicationsController.Browse`, mapped to `BrowseUnitViewModel` |
-| `IApplicationWizardService.GetMyApplicationsAsync(...)` | `List<RentalApplication>` (`.Include(a => a.Unit).ThenInclude(u => u.Property)`) | `ApplicationsController.Index`, mapped to 4 fields of `ApplicationListItemViewModel` |
-| `IApplicationReviewService.GetFilteredAsync(...)` | `List<RentalApplication>` (+ `Applicant`, `Unit`, `Property`) | `ApplicationReviewController.Index`, mapped to `PmApplicationListItemViewModel` |
-| `IApplicationReviewService.GetHistoryAsync(...)` | `List<ApplicationStatusHistory>` (+ `ChangedBy`) | `ApplicationReviewController.Details`, mapped to `StatusHistoryItemViewModel` |
+| `IPropertyService.GetAllAsync()` | `List<PropertyListItemViewModel>` (Id, Name, **Address**) | `PropertiesController.LoadListAsync` (needs Address, not just Id+Name — the original "minimal Id+Name" idea in this table would have broken it), plus 3 Id/Name-only dropdowns |
+| `IApplicationBrowseService.GetAvailableUnitsAsync(...)` | `List<BrowseUnitViewModel>` | `ApplicationsController.Browse` — `ExistingApplicationId` still composed by the controller afterward |
+| `IApplicationWizardService.GetMyApplicationsAsync(...)` | `List<ApplicationListItemViewModel>` | `ApplicationsController.Index` — `IsEditable`/`CanWithdraw` deliberately filled in *after* `ToListAsync()`, not inside `.Select()` (see note below) |
+| `IApplicationReviewService.GetFilteredAsync(...)` | `List<PmApplicationListItemViewModel>` | `ApplicationReviewController.Index` |
+| `IApplicationReviewService.GetHistoryAsync(...)` | `List<StatusHistoryItemViewModel>` | `ApplicationReviewController.Details` |
 
-**Not a violation:** `GetByIdAsync`/`GetOwnedAsync`/`GetReviewableAsync`-style single-entity reads (`PropertiesController.Edit`, `UnitsController.Edit`, `ApplicationsController.Wizard`, `ApplicationReviewController.Review`, etc.) are legitimately entities — they're loaded immediately before an `Update`/`Delete`/status-transition call, and EF Core needs the tracked instance for that to work. Only the list/history reads in the table above are in scope for this rule.
+**A real pitfall caught during execution:** `RentalApplicationRules.IsEditable`/`IsOpen` are plain C# static methods — EF Core's SQL Server provider cannot translate an arbitrary method call inside `.Select()`, and would throw at runtime. The `dotnet test` suite alone would **not** have caught this, since EF Core's InMemory provider evaluates LINQ very differently and tolerates method calls the real provider can't. `GetMyApplicationsAsync` was verified specifically against the real SQL Server container (not just InMemory-backed tests) before being trusted: the DB-translatable fields are projected in `.Select()`, and `IsEditable`/`CanWithdraw` are filled in with a loop over the materialized list afterward — single query, correct values, no translation risk, and Rule 2's single source of truth for the status list stays intact (no re-derived `Draft`/`Submitted`/`Returned` checks inline).
+
+**Not a violation:** `GetByIdAsync`/`GetOwnedAsync`/`GetReviewableAsync`-style single-entity reads (`PropertiesController.Edit`, `UnitsController.Edit`, `ApplicationsController.Wizard`, `ApplicationReviewController.Review`, etc.) are legitimately entities — they're loaded immediately before an `Update`/`Delete`/status-transition call, and EF Core needs the tracked instance for that to work. Only the list/history reads above were in scope for this rule.
 
 ## 10. Services Own `DbContext`, Not ViewComponents — ✅ Fixed (Phase 4)
 
@@ -107,7 +107,7 @@ This list reflects `REMEDIATION_PLAN.md`'s phase order, which refined this order
 
 1. ✅ **Rule 11** (translate the Ukrainian comments in `AccountController.cs`, and `Dockerfile`, to English) — done in Phase 1, merged to `main`.
 2. ✅ **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to `ApplicationListItemViewModel`/`ApplicationWizardViewModel`, update the three view call sites) — done in Phase 2, merged to `main`.
-3. ✅ **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — done in Phase 3, on `refactor/phase-3-centralize-validation` (committed, not yet pushed).
-4. ✅ **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a new `IApplicationSummaryService`) — done in Phase 4, on `refactor/phase-4-viewcomponent-services` (committed, not yet pushed). Also closed Rule 3's only open finding.
-5. **Rule 9** (project the five listed read paths straight to their ViewModels in the service query, following `UnitListViewComponent`'s existing pattern) — do this after Rule 2 (done) and after Rule 10 (done), since the `GetMyApplicationsAsync` projection needs the `IsEditable`/`CanWithdraw` fields that now exist. Not started.
+3. ✅ **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — done in Phase 3, merged to `main`.
+4. ✅ **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a new `IApplicationSummaryService`) — done in Phase 4, merged to `main`. Also closed Rule 3's only open finding.
+5. ✅ **Rule 9** (project the five listed read paths straight to their ViewModels in the service query) — done in Phase 5, on `refactor/phase-5-project-viewmodels` (committed, not yet pushed).
 6. **Rule 7** (resolve the "Domain" naming collision, group `ViewComponents` by feature) — a rename/move, best done last since it touches the most file paths and should land on a clean diff. Not started.

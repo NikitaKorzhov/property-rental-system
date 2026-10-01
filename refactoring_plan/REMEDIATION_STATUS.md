@@ -1,6 +1,6 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1–3 are done and merged to `main`; Phase 4 is done on `refactor/phase-4-viewcomponent-services` (committed, not yet pushed).
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1–4 are done and merged to `main`; Phase 5 is done on `refactor/phase-5-project-viewmodels` (committed, not yet pushed).
 
 ## Summary
 
@@ -9,8 +9,8 @@ Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-ste
 | 1 — Translate non-English comments | 11 | ✅ Done (merged to main) | 2/2 |
 | 2 — Remove duplicated status checks from views | 2, 4 | ✅ Done (merged to main) | 5/5 |
 | 3 — Centralize wizard validation | 8 | ✅ Done (merged to main) | 6/6 |
-| 4 — Move ViewComponent queries into services | 3, 10 | ✅ Done (committed, not pushed) | 3/3 |
-| 5 — Project to ViewModels at the boundary | 9 | ⬜ Not started | 0/5 |
+| 4 — Move ViewComponent queries into services | 3, 10 | ✅ Done (merged to main) | 3/3 |
+| 5 — Project to ViewModels at the boundary | 9 | ✅ Done (committed, not pushed) | 4/4 |
 | 6 — Resolve folder/namespace boundaries | 7 | ⬜ Not started | 0/3 |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done
@@ -84,16 +84,16 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 ## Phase 5 — Project to ViewModels at the boundary (Rule 9)
 
-**Status:** ⬜ Not started — no longer blocked (Phases 2 and 4 are both done, so `IsEditable`/`CanWithdraw` already exist on `ApplicationListItemViewModel`, and `UnitListViewComponent`/`ApplicationSummaryViewComponent` are no longer part of this phase's scope — see the note in Phase 4).
+**Status:** ✅ Done — split across 4 commits on `refactor/phase-5-project-viewmodels` (not yet pushed), one per method/service, since all 4 are mutually independent (unlike Phase 3, a signature change either compiles fully or doesn't at all — no unsafe partial state is possible, so the split is purely for reviewability).
 
-- [ ] `IPropertyService.GetAllAsync()` → project to a minimal `Id`+`Name` shape; update the three call sites (`PropertiesController.LoadListAsync`, `ApplicationsController.Index`/`Browse`, `ApplicationReviewController.Index`).
-- [ ] `IApplicationBrowseService.GetAvailableUnitsAsync(...)` → project to `BrowseUnitViewModel` (composing `ExistingApplicationId` in the controller as today).
-- [ ] `IApplicationWizardService.GetMyApplicationsAsync(...)` → project to `ApplicationListItemViewModel`, including `IsEditable`/`CanWithdraw`. *(requires Phase 2 done first)*
-- [ ] `IApplicationReviewService.GetFilteredAsync(...)` → project to `PmApplicationListItemViewModel`.
-- [ ] `IApplicationReviewService.GetHistoryAsync(...)` → project to `StatusHistoryItemViewModel`.
-- [ ] Update every affected `Services` test to assert on ViewModel properties instead of entity/navigation properties.
+- [x] `IPropertyService.GetAllAsync()` → project to the **existing** `PropertyListItemViewModel` (Id, Name, Address) — not a new minimal Id+Name shape as originally sketched here, which would have broken `PropertiesController.LoadListAsync` (needs Address for the main property list, not just the 3 dropdown call sites). `LoadListAsync` is now a direct pass-through; the 3 dropdowns (`ApplicationsController.Index`/`Browse`, `ApplicationReviewController.Index`) needed zero code changes.
+- [x] `IApplicationBrowseService.GetAvailableUnitsAsync(...)` → project to `BrowseUnitViewModel`; `ExistingApplicationId` composed by the controller afterward via a loop (same pattern used for `IsEditable`/`CanWithdraw` below), not a `.Select()`.
+- [x] `IApplicationWizardService.GetMyApplicationsAsync(...)` → project the DB-translatable fields to `ApplicationListItemViewModel` in `.Select()`; `IsEditable`/`CanWithdraw` filled in via `RentalApplicationRules` in a loop *after* `ToListAsync()` — calling `RentalApplicationRules` directly inside `.Select()` is not SQL-translatable and would throw against the real SQL Server provider, a failure `dotnet test`'s InMemory provider would not have caught. Verified specifically against the real SQL Server container, not just the test suite.
+- [x] `IApplicationReviewService.GetFilteredAsync(...)` → project to `PmApplicationListItemViewModel`.
+- [x] `IApplicationReviewService.GetHistoryAsync(...)` → project to `StatusHistoryItemViewModel`.
+- [x] Checked every affected `Services` test: all 7 existing assertions (`PropertyServiceTests`, 3× `ApplicationBrowseServiceTests`, 2× `ApplicationReviewServiceTests` `GetFilteredAsync` tests) needed **zero code changes** — the entity and ViewModel property names/types happen to match exactly, so the same assertions compile and pass against the new return types unchanged. `GetMyApplicationsAsync`/`GetHistoryAsync` had no prior direct tests either way.
 
-**Verified current state:** all five methods still return full entity lists (`List<Property>`, `List<Unit>`, `List<RentalApplication>`, `List<ApplicationStatusHistory>`) — e.g. `IPropertyService.GetAllAsync()` is still `Task<List<Property>> GetAllAsync();`. Controllers still do the entity → ViewModel mapping themselves.
+**Verified current state:** `dotnet build`: 0 warnings/0 errors after each of the 4 commits. `dotnet test`: 108/108 passing throughout (no test file needed editing). Manually checked against a running instance (real SQL Server, not InMemory) after each commit: Properties page (name+address), Browse (filters, Apply/Continue buttons, lease-exclusion), My Applications (all 5 live statuses → correct label/Withdraw), Review Index (applicant emails) and Details (full correct status history) all render identical data to before. EF Core query logs inspected after every commit — each of the 4 migrated methods still produces exactly one SQL statement with only the needed columns/JOINs, no N+1, and in every case strictly less data pulled than before.
 
 **Notes:** —
 
