@@ -1,6 +1,6 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1–5 are done and merged to `main`; Phase 6 is done on `refactor/phase-6-folder-namespace-cleanup` (committed, not yet pushed) — **all 6 phases of the plan are now complete**.
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: **all 6 phases of the plan are merged to `main`.** See [`FURTHER_IMPROVEMENTS.md`](FURTHER_IMPROVEMENTS.md) for a fresh post-refactor pass against the original reviewer feedback — 2 small residual findings beyond this plan's original scope.
 
 ## Summary
 
