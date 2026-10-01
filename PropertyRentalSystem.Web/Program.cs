@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Applications;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.Services.Review;

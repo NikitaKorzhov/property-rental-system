@@ -158,7 +158,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationStatusHistory", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.ApplicationStatusHistory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -191,7 +191,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("ApplicationStatusHistories");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -256,7 +256,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Lease", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Lease", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -286,7 +286,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("Leases");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Property", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Property", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -307,7 +307,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("Properties");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.RentalApplication", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.RentalApplication", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -356,7 +356,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("RentalApplications");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ResidenceHistory", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.ResidenceHistory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -392,7 +392,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("ResidenceHistories");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Unit", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Unit", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -426,7 +426,7 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.ToTable("Units");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.UnitType", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.UnitType", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -457,7 +457,7 @@ namespace PropertyRentalSystem.Web.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", null)
+                    b.HasOne("PropertyRentalSystem.Web.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -466,7 +466,7 @@ namespace PropertyRentalSystem.Web.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", null)
+                    b.HasOne("PropertyRentalSystem.Web.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -481,7 +481,7 @@ namespace PropertyRentalSystem.Web.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", null)
+                    b.HasOne("PropertyRentalSystem.Web.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -490,22 +490,22 @@ namespace PropertyRentalSystem.Web.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", null)
+                    b.HasOne("PropertyRentalSystem.Web.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationStatusHistory", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.ApplicationStatusHistory", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", "ChangedBy")
+                    b.HasOne("PropertyRentalSystem.Web.Models.ApplicationUser", "ChangedBy")
                         .WithMany()
                         .HasForeignKey("ChangedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.RentalApplication", "RentalApplication")
+                    b.HasOne("PropertyRentalSystem.Web.Models.RentalApplication", "RentalApplication")
                         .WithMany("StatusHistory")
                         .HasForeignKey("RentalApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -516,15 +516,15 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.Navigation("RentalApplication");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Lease", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Lease", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.RentalApplication", "RentalApplication")
+                    b.HasOne("PropertyRentalSystem.Web.Models.RentalApplication", "RentalApplication")
                         .WithOne("Lease")
-                        .HasForeignKey("PropertyRentalSystem.Web.Models.Domain.Lease", "RentalApplicationId")
+                        .HasForeignKey("PropertyRentalSystem.Web.Models.Lease", "RentalApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.Unit", "Unit")
+                    b.HasOne("PropertyRentalSystem.Web.Models.Unit", "Unit")
                         .WithMany("Leases")
                         .HasForeignKey("UnitId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -535,15 +535,15 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.Navigation("Unit");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.RentalApplication", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.RentalApplication", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", "Applicant")
+                    b.HasOne("PropertyRentalSystem.Web.Models.ApplicationUser", "Applicant")
                         .WithMany("Applications")
                         .HasForeignKey("ApplicantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.Unit", "Unit")
+                    b.HasOne("PropertyRentalSystem.Web.Models.Unit", "Unit")
                         .WithMany("Applications")
                         .HasForeignKey("UnitId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -554,9 +554,9 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.Navigation("Unit");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ResidenceHistory", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.ResidenceHistory", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.RentalApplication", "RentalApplication")
+                    b.HasOne("PropertyRentalSystem.Web.Models.RentalApplication", "RentalApplication")
                         .WithMany("ResidenceHistories")
                         .HasForeignKey("RentalApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -565,15 +565,15 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.Navigation("RentalApplication");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Unit", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Unit", b =>
                 {
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.Property", "Property")
+                    b.HasOne("PropertyRentalSystem.Web.Models.Property", "Property")
                         .WithMany("Units")
                         .HasForeignKey("PropertyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PropertyRentalSystem.Web.Models.Domain.UnitType", "UnitType")
+                    b.HasOne("PropertyRentalSystem.Web.Models.UnitType", "UnitType")
                         .WithMany("Units")
                         .HasForeignKey("UnitTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -584,17 +584,17 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.Navigation("UnitType");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.ApplicationUser", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Applications");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Property", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Property", b =>
                 {
                     b.Navigation("Units");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.RentalApplication", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.RentalApplication", b =>
                 {
                     b.Navigation("Lease");
 
@@ -603,14 +603,14 @@ namespace PropertyRentalSystem.Web.Migrations
                     b.Navigation("StatusHistory");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.Unit", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Unit", b =>
                 {
                     b.Navigation("Applications");
 
                     b.Navigation("Leases");
                 });
 
-            modelBuilder.Entity("PropertyRentalSystem.Web.Models.Domain.UnitType", b =>
+            modelBuilder.Entity("PropertyRentalSystem.Web.Models.UnitType", b =>
                 {
                     b.Navigation("Units");
                 });

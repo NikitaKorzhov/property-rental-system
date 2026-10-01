@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.ViewModels.Properties;
 
 namespace PropertyRentalSystem.Web.Services.Properties;

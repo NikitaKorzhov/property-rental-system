@@ -1,6 +1,6 @@
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 
-namespace PropertyRentalSystem.Web.Domain.Rules;
+namespace PropertyRentalSystem.Web.BusinessRules;
 
 public static class RentalApplicationRules
 {
