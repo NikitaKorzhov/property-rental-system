@@ -63,6 +63,8 @@ Other structural notes:
 - Filtering of application lists (`ApplicationBrowseService`) is done in the database via `IQueryable.Where`, not in memory — keep new list/filter features consistent with that pattern. Applicants only ever see their own applications; property managers see all.
 - `ViewComponents/` (`UnitList`, `ApplicationSummary`) and `Views/Shared/Components/` back reusable fragments reused across pages/partials.
 
+**Active refactoring work:** [`refactoring_plan/`](refactoring_plan/) holds the binding architecture rules this codebase is being brought into compliance with (`ARCHITECTURE_RULES.md`), an audit of where the current code doesn't yet follow them (`RULES_COMPLIANCE_AUDIT.md`), the phased plan to close those gaps (`REMEDIATION_PLAN.md`), and live progress tracking (`REMEDIATION_STATUS.md`). Check `REMEDIATION_STATUS.md` before writing new code in an area a phase covers, so new work doesn't get built against a pattern already flagged for removal.
+
 ## Infrastructure
 
 - **Local/dev runtime:** `docker-compose.yml` defines two services — `db` (`mcr.microsoft.com/mssql/server:2022-latest`, custom entrypoint `db-init/entrypoint.sh` + `db-init/init.sql` that provisions the `DB_NAME` database and the `DB_USER` SQL login since the base image only creates `sa`) and `web` (built from `PropertyRentalSystem.Web/Dockerfile`). `web` waits on `db`'s healthcheck, which deliberately probes with `DB_USER`/`DB_NAME` rather than `sa` to avoid a startup race against `db-init`. Config is environment-driven via `.env` (git-ignored; see `.env.example` for `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `WEB_PORT`). DB data persists in the `mssqldata` named volume.
