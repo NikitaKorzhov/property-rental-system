@@ -16,7 +16,7 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 | 8. Centralized Validation | ❌ Violations found |
 | 9. Project to ViewModels at the Boundary | ❌ Systemic violations found |
 | 10. Services Own `DbContext` | ❌ Violations found |
-| 11. Codebase Hygiene & Consistency | ❌ Violations found |
+| 11. Codebase Hygiene & Consistency | ✅ Fixed (Phase 1) |
 | 12. Short, Purpose-Focused Comments | ✅ Compliant |
 
 ---
@@ -90,20 +90,11 @@ Read paths that exist purely to back a list/summary/history view, and are never 
 
 `UnitListViewComponent` (`ViewComponents/UnitListViewComponent.cs:9-16`) and `ApplicationSummaryViewComponent` (`ViewComponents/ApplicationSummaryViewComponent.cs:12-18`) both have `ApplicationDbContext` injected directly into the constructor and query it themselves inside `InvokeAsync`, bypassing the Services layer entirely. This is the one place in the codebase where the Rule 3 data-access boundary isn't actually held — controllers hold it correctly (see Rule 1), view components don't.
 
-## 11. Codebase Hygiene & Consistency — ❌ Violations found
+## 11. Codebase Hygiene & Consistency — ✅ Fixed (Phase 1)
 
 (Documented in `ARCHITECTURE_RULES.md` §11; restated here for completeness.)
 
-`Controllers/AccountController.cs` has several comments written in Ukrainian while the rest of the codebase comments in English:
-- Line 21: `// ---------- Реєстрація ----------`
-- Line 28: `// Сервер не довіряє тому, що прийшло з форми: пропускаємо тільки дві ролі`
-- Line 40: `// Помилки Identity: "пароль закороткий", "email зайнятий" і т.д.`
-- Line 57: `// одразу залогінити`
-- Line 61: `// ---------- Вхід ----------`
-- Line 81: `// Повертаємо тільки на свій сайт, щоб ніхто не підсунув посилання на чужий`
-- Line 88: `// ---------- Вихід ----------`
-
-A repo-wide scan for non-ASCII (Cyrillic-range) characters across every `.cs`/`.cshtml` file in both projects found no other occurrences — this file is the only offender. Formatting/bracing style (brace-less single-statement guard clauses like `if (x == null) return NotFound();`) is applied uniformly across the codebase and is a deliberate, consistent house style rather than a defect — not flagged here.
+Originally found: `Controllers/AccountController.cs` had 7 comments written in Ukrainian while the rest of the codebase comments in English (lines 21, 28, 40, 57, 61, 81, 88). **Correction to this audit's original method:** the scan that found those was scoped to `.cs`/`.cshtml` only — too narrow. Re-running it across the *entire* repository (still excluding `.git`/`bin`/`obj`/`.idea`) during Phase 1 turned up one more offender outside that scope: `PropertyRentalSystem.Web/Dockerfile` had 4 Ukrainian comments too. Both files are now fully English; a repo-wide Cyrillic scan finds nothing left in actual project files (only this plan's own documentation, which quotes the old text as historical evidence). Formatting/bracing style (brace-less single-statement guard clauses like `if (x == null) return NotFound();`) is applied uniformly across the codebase and is a deliberate, consistent house style rather than a defect — not flagged here.
 
 ## 12. Short, Purpose-Focused Comments — ✅ Compliant
 

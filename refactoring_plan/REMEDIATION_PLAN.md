@@ -19,17 +19,17 @@ Rules 1, 5, 6, and 12 need no dedicated phase (already compliant — see `RULES_
 
 ---
 
-## Phase 1 — Translate non-English comments (Rule 11)
+## Phase 1 — Translate non-English comments (Rule 11) — ✅ Done
 
-**Why it's first:** single file, no behavior change, no test impact, zero risk.
+**Why it's first:** small, no behavior change, no test impact, zero risk.
 
-**Scope:** `Controllers/AccountController.cs` only — the 7 Ukrainian comments identified in the audit (lines 21, 28, 40, 57, 61, 81, 88).
+**Scope:** `Controllers/AccountController.cs` — the 7 Ukrainian comments identified in the audit (lines 21, 28, 40, 57, 61, 81, 88) — plus `PropertyRentalSystem.Web/Dockerfile`, which had 4 more Ukrainian comments the original audit missed (it only scanned `.cs`/`.cshtml`; the whole repo needs scanning per Rule 11's broadened scope — see `ARCHITECTURE_RULES.md` §11).
 
 **Steps:**
-1. Translate each comment to English, preserving its meaning (e.g. `// ---------- Реєстрація ----------` → `// ---------- Registration ----------`).
-2. Re-run the repo-wide non-ASCII scan from the audit to confirm no other file has the same issue.
+1. Translate each comment to English, preserving its meaning (e.g. the Ukrainian section-header comment above the `Register` action became `// ---------- Registration ----------`).
+2. Re-run a non-ASCII scan across the **entire repository** (not just `.cs`/`.cshtml`) to confirm no other file — code, config, or infrastructure (`Dockerfile`, `.sh`, `.sql`, `.yml`, etc.) — has the same issue.
 
-**Verification:** `dotnet build` (comments don't affect compilation, but confirms nothing else broke); no test changes needed.
+**Verification:** `dotnet build` (comments don't affect compilation, but confirms nothing else broke); no test changes needed. Both done — build succeeds with 0 warnings/0 errors, repo-wide scan is clean outside this plan's own documentation (which quotes the old text as historical evidence).
 
 **Dependencies:** None. Can be done first, anytime, by anyone.
 
