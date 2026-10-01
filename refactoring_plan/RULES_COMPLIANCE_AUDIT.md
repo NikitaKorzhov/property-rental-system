@@ -13,7 +13,7 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 | 5. DTOs / Type Safety | ✅ Compliant |
 | 6. Strangler-Fig Refactoring | ➖ Not applicable to a static snapshot |
 | 7. Folder / Module Boundaries | ❌ Violations found |
-| 8. Centralized Validation | ❌ Violations found |
+| 8. Centralized Validation | ✅ Fixed (Phase 3) |
 | 9. Project to ViewModels at the Boundary | ❌ Systemic violations found |
 | 10. Services Own `DbContext` | ❌ Violations found |
 | 11. Codebase Hygiene & Consistency | ✅ Fixed (Phase 1) |
@@ -29,7 +29,7 @@ No controller contains a direct `DbContext` call, LINQ query, or `SaveChangesAsy
 
 Originally found: the application-status "open"/"editable" business rule (`Domain/Rules/RentalApplicationRules.IsOpen` / `IsEditable`) was re-implemented inline, a second time, directly in Razor markup instead of being read from a precomputed ViewModel flag, in `Views/Applications/Wizard.cshtml:66` and `Views/Applications/Index.cshtml:65,67`. `ApplicationListItemViewModel` and `ApplicationWizardViewModel` now carry `IsEditable`/`CanWithdraw` flags computed once in `ApplicationsController` via `RentalApplicationRules`, and both views read those flags instead of re-deriving the status list themselves — verified both in the test suite (99/99 passing) and manually against a running instance across all 6 statuses (see the Phase 2 verification notes in `REMEDIATION_STATUS.md`).
 
-**Still open, tracked separately under Rule 8:** `ApplicationWizardService.SaveApplicantInfoAsync` (`Services/Applications/ApplicationWizardService.cs:71-99`) still hand-rolls required-field and email-format checks with `string.IsNullOrWhiteSpace`/`EmailAddressAttribute` inside the service, rather than expressing them as `DataAnnotations` on `ApplicationWizardViewModel` the way every other form in the app does. Phase 2 didn't touch this — it's Phase 3's job.
+**Related finding, now also fixed:** `ApplicationWizardService.SaveApplicantInfoAsync` used to hand-roll required-field and email-format checks instead of expressing them as `DataAnnotations` on `ApplicationWizardViewModel` the way every other form in the app does — Phase 2 didn't touch this, but Phase 3 did; see Rule 8 below.
 
 ## 3. Separate Data Access — ⚠️ Partial violations
 
@@ -54,11 +54,13 @@ This rule describes a *process* for making future changes, not a property the cu
 - Two unrelated, non-nested folders are both named "Domain": `Domain/Rules` (business-rule classes) and `Models/Domain` (EF Core entities).
 - `ViewComponents/` is a flat folder (`UnitListViewComponent.cs`, `ApplicationSummaryViewComponent.cs`), unlike `Controllers/`, `Services/`, `ViewModels/`, and `Views/`, which are all grouped by feature (`Properties`, `Units`, `Applications`, `Review`).
 
-## 8. Centralized Validation — ❌ Violations found
+## 8. Centralized Validation — ✅ Fixed (Phase 3)
 
 (Documented in `ARCHITECTURE_RULES.md` §8; restated here for completeness.)
 
-`RegisterViewModel`, `LoginViewModel`, `PropertyFormViewModel`, `UnitFormViewModel`, `ReviewFormViewModel`, and `ResidenceHistoryFormViewModel` all validate presence/format via `DataAnnotations`/`IValidatableObject`. `ApplicationWizardViewModel` has none; instead `ApplicationWizardService.SaveApplicantInfoAsync` (`Services/Applications/ApplicationWizardService.cs:77-90`) manually checks `FullName`, `Phone`, `Email` (including re-running `new EmailAddressAttribute().IsValid(email)` by hand), and `CurrentAddress`, reporting failures as `ServiceResult` field errors instead. Same category of rule (field presence/format), two different mechanisms, in two different layers.
+Originally found: `RegisterViewModel`, `LoginViewModel`, `PropertyFormViewModel`, `UnitFormViewModel`, `ReviewFormViewModel`, and `ResidenceHistoryFormViewModel` all validated presence/format via `DataAnnotations`/`IValidatableObject`, but `ApplicationWizardViewModel` had none — `ApplicationWizardService.SaveApplicantInfoAsync` manually checked `FullName`, `Phone`, `Email` (re-running `new EmailAddressAttribute().IsValid(email)` by hand), and `CurrentAddress` instead, reporting failures as `ServiceResult` field errors. `ApplicationWizardViewModel` now carries `[Required]`/`[EmailAddress]` on those four fields — the same `DataAnnotations` mechanism every other form uses — and `ApplicationsController.Wizard` checks `ModelState.IsValid` before calling the service, which no longer re-validates field shape at all.
+
+**Why this fix landed in 2 commits instead of 1** (unlike every other single-commit phase so far): relocating validation across layers has a window where splitting it wrong leaves data completely unvalidated — e.g. removing the service's checks *before* the ViewModel/controller side existed would let invalid data save silently, since nothing would be checking it. The safe split is additive-first: commit 1 added the `DataAnnotations` + the controller's `ModelState.IsValid` guard, with the old service checks left in place (now redundant — the controller short-circuits before reaching them — but harmless); commit 2 removed the now-provably-dead service code once the new path was verified both by the test suite and manually against a running instance. Each commit left the app in a fully working state.
 
 ## 9. Project to ViewModels/DTOs at the Data-Access Boundary — ❌ Systemic violations found
 
@@ -90,7 +92,7 @@ Originally found: `Controllers/AccountController.cs` had 7 comments written in U
 
 ## 12. Short, Purpose-Focused Comments — ✅ Compliant
 
-A scan for `/* */` block comments across `PropertyRentalSystem.Web` returns zero matches, and a scan for runs of 4+ consecutive `//` lines in the same tree returns exactly one: `ViewModels/Applications/ApplicationWizardViewModel.cs:6-9`. That comment will need rewriting once Phase 3 of `REMEDIATION_PLAN.md` lands — it currently explains why validation is done manually "rather than via DataAnnotations," a claim Phase 3 makes false — so it's tracked there, not as a separate violation here.
+A scan for `/* */` block comments across `PropertyRentalSystem.Web` returns zero matches, and a scan for runs of 4+ consecutive `//` lines in the same tree returns none anymore either — the one that used to exist, `ViewModels/Applications/ApplicationWizardViewModel.cs:6-9` (explaining why validation was done manually "rather than via DataAnnotations"), was rewritten in Phase 3 once that claim stopped being true.
 
 ---
 
@@ -99,8 +101,8 @@ A scan for `/* */` block comments across `PropertyRentalSystem.Web` returns zero
 This list reflects `REMEDIATION_PLAN.md`'s phase order, which refined this order slightly (Phase 2 before Phase 3) based on a finer-grained complexity analysis — see that file for the authoritative sequencing and dependency notes.
 
 1. ✅ **Rule 11** (translate the Ukrainian comments in `AccountController.cs`, and `Dockerfile`, to English) — done in Phase 1, merged to `main`.
-2. ✅ **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to `ApplicationListItemViewModel`/`ApplicationWizardViewModel`, update the three view call sites) — done in Phase 2, on `refactor/phase-2-dedupe-status-checks` (uncommitted as of this update).
-3. **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — contained to one view model + one service method, has existing test coverage to refactor against (per Rule 6). Not started.
+2. ✅ **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to `ApplicationListItemViewModel`/`ApplicationWizardViewModel`, update the three view call sites) — done in Phase 2, merged to `main`.
+3. ✅ **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — done in Phase 3, on `refactor/phase-3-centralize-validation` (committed, not yet pushed).
 4. **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a neutral service) — closes the one data-access-boundary gap, which is also Rule 3's only open finding. Not started.
 5. **Rule 9** (project the five listed read paths straight to their ViewModels in the service query, following `UnitListViewComponent`'s existing pattern) — do this after Rule 2 (done) and after Rule 10, since the `GetMyApplicationsAsync` projection needs the `IsEditable`/`CanWithdraw` fields that now exist, and two of the queries in scope are moving out of view components as part of the Rule 10 fix anyway. Not started.
 6. **Rule 7** (resolve the "Domain" naming collision, group `ViewComponents` by feature) — a rename/move, best done last since it touches the most file paths and should land on a clean diff. Not started.

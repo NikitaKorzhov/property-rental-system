@@ -85,32 +85,8 @@ public class ApplicationWizardServiceTests
     }
 
     // ---------- SaveApplicantInfoAsync ----------
-
-    [Fact]
-    public async Task SaveApplicantInfoAsync_WithAllFieldsMissing_ReturnsAllFourFieldErrors()
-    {
-        await using var db = TestDb.Create();
-        var (_, _, application) = await SeedAsync(db);
-        var service = new ApplicationWizardService(db);
-
-        var result = await service.SaveApplicantInfoAsync(application, "", "", "", "");
-
-        Assert.False(result.Succeeded);
-        Assert.Equal(4, result.Errors.Count);
-    }
-
-    [Fact]
-    public async Task SaveApplicantInfoAsync_WithInvalidEmail_FailsOnEmailField()
-    {
-        await using var db = TestDb.Create();
-        var (_, _, application) = await SeedAsync(db);
-        var service = new ApplicationWizardService(db);
-
-        var result = await service.SaveApplicantInfoAsync(application, "A B", "123", "not-an-email", "1 St");
-
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Errors, e => e.Field == "Email");
-    }
+    // Field presence/format validation (required fields, email shape) now lives on
+    // ApplicationWizardViewModel's DataAnnotations — see ApplicationWizardViewModelTests.
 
     [Fact]
     public async Task SaveApplicantInfoAsync_WhenNotEditable_Fails()

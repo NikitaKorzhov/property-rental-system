@@ -164,6 +164,9 @@ public class ApplicationsController : ModalFormControllerBase
                 return View(BuildViewModel(application, _wizard.GoBack(model.Step), reviewComment: reviewComment));
 
             case "Continue" when model.Step == WizardStep.ApplicantInfo:
+                if (!ModelState.IsValid)
+                    return View(BuildViewModel(application, WizardStep.ApplicantInfo, model, reviewComment));
+
                 var infoResult = await _wizard.SaveApplicantInfoAsync(
                     application, model.FullName, model.Phone, model.Email, model.CurrentAddress);
                 if (!infoResult.Succeeded)

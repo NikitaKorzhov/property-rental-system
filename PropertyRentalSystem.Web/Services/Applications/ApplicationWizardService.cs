@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Domain.Rules;
@@ -73,21 +72,6 @@ public class ApplicationWizardService : IApplicationWizardService
     {
         if (!RentalApplicationRules.IsEditable(application.Status))
             return ServiceResult.Fail("This application can no longer be edited.");
-
-        var errors = new List<ServiceError>();
-        if (string.IsNullOrWhiteSpace(fullName))
-            errors.Add(new ServiceError("FullName", "Full name is required."));
-        if (string.IsNullOrWhiteSpace(phone))
-            errors.Add(new ServiceError("Phone", "Phone is required."));
-        if (string.IsNullOrWhiteSpace(email))
-            errors.Add(new ServiceError("Email", "Email is required."));
-        else if (!new EmailAddressAttribute().IsValid(email))
-            errors.Add(new ServiceError("Email", "Enter a valid email address."));
-        if (string.IsNullOrWhiteSpace(currentAddress))
-            errors.Add(new ServiceError("CurrentAddress", "Current address is required."));
-
-        if (errors.Count > 0)
-            return ServiceResult.Fail(errors);
 
         application.FullName = fullName.Trim();
         application.Phone = phone.Trim();
