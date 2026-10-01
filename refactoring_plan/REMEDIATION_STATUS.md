@@ -1,6 +1,6 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1 and 2 are done (Phase 1 merged to `main`; Phase 2 done on `refactor/phase-2-dedupe-status-checks`, uncommitted).
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1 and 2 are done and merged to `main`; Phase 3 is done on `refactor/phase-3-centralize-validation` (committed, not yet pushed).
 
 ## Summary
 
@@ -8,14 +8,14 @@ Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-ste
 |---|---|---|---|
 | 1 — Translate non-English comments | 11 | ✅ Done (merged to main) | 2/2 |
 | 2 — Remove duplicated status checks from views | 2, 4 | ✅ Done (uncommitted) | 5/5 |
-| 3 — Centralize wizard validation | 8 | ⬜ Not started | 0/5 |
+| 3 — Centralize wizard validation | 8 | ✅ Done (committed, not pushed) | 6/6 |
 | 4 — Move ViewComponent queries into services | 3, 10 | ⬜ Not started | 0/3 |
 | 5 — Project to ViewModels at the boundary | 9 | ⬜ Not started | 0/5 |
 | 6 — Resolve folder/namespace boundaries | 7 | ⬜ Not started | 0/3 |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done
 
-Rule 12 (short, purpose-focused comments) needs no phase of its own — already compliant; its one note (the comment at `ApplicationWizardViewModel.cs:6-9`) is folded into Phase 3's checklist below.
+Rule 12 (short, purpose-focused comments) needs no phase of its own — already compliant; its one note (the comment at `ApplicationWizardViewModel.cs:6-9`) was rewritten as part of Phase 3 below.
 
 ---
 
@@ -53,18 +53,18 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 ## Phase 3 — Centralize wizard validation (Rule 8)
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done — split across 2 commits on `refactor/phase-3-centralize-validation` (not yet pushed): commit 1 introduced the new validation path alongside the old one (safe, redundant); commit 2 removed the old path once proven out. See `RULES_COMPLIANCE_AUDIT.md` §8 for why this phase used 2 commits instead of 1.
 
-- [ ] Add `[Required]`/`[EmailAddress]` (and any needed `[StringLength]`) to `FullName`, `Phone`, `Email`, `CurrentAddress` on `ApplicationWizardViewModel`.
-- [ ] Remove the manual `IsNullOrWhiteSpace`/`EmailAddressAttribute` checks from `ApplicationWizardService.SaveApplicantInfoAsync`, keeping the `IsEditable` business-state check and the trim/save logic.
-- [ ] Add a `ModelState.IsValid` check in `ApplicationsController.Wizard`'s `case "Continue" when model.Step == WizardStep.ApplicantInfo`, re-rendering on failure.
-- [ ] Update `ApplicationWizardServiceTests` — remove/replace `WithAllFieldsMissing_ReturnsAllFourFieldErrors` and `WithInvalidEmail_FailsOnEmailField`; keep `WhenNotEditable_Fails` and `TrimsWhitespaceAndMarksSectionComplete`.
-- [ ] Add `ApplicationWizardViewModelTests` covering the moved required/email-format cases.
-- [ ] Rewrite the comment at `ApplicationWizardViewModel.cs:6-9` (now-stale once validation moves; keep it short per Rule 12).
+- [x] Add `[Required]`/`[EmailAddress]` to `FullName`, `Phone`, `Email`, `CurrentAddress` on `ApplicationWizardViewModel` (no `[StringLength]` was implied by the old checks, so none added).
+- [x] Remove the manual `IsNullOrWhiteSpace`/`EmailAddressAttribute` checks from `ApplicationWizardService.SaveApplicantInfoAsync`, keeping the `IsEditable` business-state check and the trim/save logic. Also removed the now-unused `System.ComponentModel.DataAnnotations` `using`.
+- [x] Add a `ModelState.IsValid` check in `ApplicationsController.Wizard`'s `case "Continue" when model.Step == WizardStep.ApplicantInfo`, re-rendering on failure.
+- [x] Update `ApplicationWizardServiceTests` — removed `WithAllFieldsMissing_ReturnsAllFourFieldErrors` and `WithInvalidEmail_FailsOnEmailField`; kept `WhenNotEditable_Fails` and `TrimsWhitespaceAndMarksSectionComplete`.
+- [x] Add `ApplicationWizardViewModelTests` (6 tests: valid case, each of the 4 required fields missing, invalid email format) covering the moved required/email-format cases.
+- [x] Rewrote the comment at `ApplicationWizardViewModel.cs:6-9` in commit 1 (not commit 2) — it became stale as soon as the DataAnnotations + controller check landed, not when the service cleanup happened.
 
-**Verified current state:** `ApplicationWizardViewModel` has no `DataAnnotations` on any field. `ApplicationWizardService.SaveApplicantInfoAsync` still hand-rolls the required/email checks. `ApplicationWizardServiceTests` still has all 4 original tests, including the two that test field-validation error messages. The comment at lines 6-9 is still present and still accurate (not yet stale).
+**Verified current state:** `dotnet build`: 0 warnings/0 errors. `dotnet test`: 103/103 passing (99 − 2 removed + 6 new = 103). Manually re-tested against a running instance (rebuilt Docker image) after *each* commit: blank fields → all 4 required errors, invalid email → its specific error, valid data → advances to Residence History — identical behavior before and after the service cleanup.
 
-**Notes:** —
+**Notes:** Uncommitted-to-`main` (pushed not requested yet) — both commits are local on this branch.
 
 ---
 
