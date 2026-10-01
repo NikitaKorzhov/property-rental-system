@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.ViewModels.Properties;
 using PropertyRentalSystem.Web.ViewModels.Shared;

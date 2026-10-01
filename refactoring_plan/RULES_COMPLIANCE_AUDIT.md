@@ -12,7 +12,7 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 | 4. Clean Razor Views | ✅ Fixed (Phase 2) |
 | 5. DTOs / Type Safety | ✅ Compliant |
 | 6. Strangler-Fig Refactoring | ➖ Not applicable to a static snapshot |
-| 7. Folder / Module Boundaries | ❌ Violations found |
+| 7. Folder / Module Boundaries | ✅ Fixed (Phase 6) |
 | 8. Centralized Validation | ✅ Fixed (Phase 3) |
 | 9. Project to ViewModels at the Boundary | ✅ Fixed (Phase 5) |
 | 10. Services Own `DbContext` | ✅ Fixed (Phase 4) |
@@ -47,12 +47,17 @@ Every `return View(...)` / `return PartialView(...)` across all controllers pass
 
 This rule describes a *process* for making future changes, not a property the current code either satisfies or violates on its own. The one relevant fact: the existing 99 tests in `PropertyRentalSystem.Tests` (`Domain/Rules`, `Services`, `ViewModels`) already give the "write/verify tests first" step of this rule something real to build on — keep that coverage current as the fixes below are applied, including adding tests for any `IsEditable`/`CanWithdraw` ViewModel flags introduced to resolve Rule 2/4.
 
-## 7. Folder / Module Boundaries — ❌ Violations found
+## 7. Folder / Module Boundaries — ✅ Fixed (Phase 6)
 
 (Documented in `ARCHITECTURE_RULES.md` §7; restated here for completeness.)
 
-- Two unrelated, non-nested folders are both named "Domain": `Domain/Rules` (business-rule classes) and `Models/Domain` (EF Core entities).
-- `ViewComponents/` is a flat folder (`UnitListViewComponent.cs`, `ApplicationSummaryViewComponent.cs`), unlike `Controllers/`, `Services/`, `ViewModels/`, and `Views/`, which are all grouped by feature (`Properties`, `Units`, `Applications`, `Review`).
+Originally found: two unrelated, non-nested folders were both named "Domain" (`Domain/Rules`, `Models/Domain`), and `ViewComponents/` was flat unlike `Services/`/`ViewModels/`/`Views/`.
+
+- **"Domain" removed from the tree entirely**, not just the collision resolved: `Models/Domain/*.cs` → `Models/*.cs` (namespace `...Models.Domain` → `...Models`, mirrored in `PropertyRentalSystem.Tests`), `Domain/Rules/*.cs` → `BusinessRules/*.cs` (namespace `...Domain.Rules` → `...BusinessRules`). `Models/` now pairs symmetrically with `ViewModels/`, the standard ASP.NET MVC convention — the old `Models/Domain/` nesting was a redundant qualifier with nothing else under `Models/` to distinguish it from. `BusinessRules` has no collision risk against "Domain" or ASP.NET's own "Policy" terminology (authorization policies). EF Core's migration snapshot/designer files embed each entity's full CLR namespace as string literals for model comparison — these were updated too, and `dotnet ef migrations has-pending-model-changes` confirms the model stayed fully in sync, so no phantom migration was generated.
+- **Bonus finding, outside the original scope:** `Models/ErrorViewModel.cs` was sitting loose directly in `Models/` despite being a ViewModel by every convention in this codebase — moved to `ViewModels/Shared/ErrorViewModel.cs`, next to `ConfirmDeleteViewModel`.
+- **`ViewComponents/` grouped by feature**: `ViewComponents/Units/UnitListViewComponent.cs`, `ViewComponents/Applications/ApplicationSummaryViewComponent.cs` — matching `Services/`/`ViewModels/`/`Views/`. Verified live that both still resolve correctly by their conventional string name (`Component.InvokeAsync("UnitList", ...)` / `"ApplicationSummary"`) despite the namespace/folder change — ASP.NET Core's view-component discovery is convention-based on class name, not namespace, which a build alone wouldn't have caught (it's a runtime string lookup).
+
+(Note: `Controllers/` itself is flat, not grouped by feature — an earlier version of this audit incorrectly implied otherwise. This wasn't in Phase 6's scope since the Rule 7 finding was specifically the `ViewComponents` vs. `Services`/`ViewModels`/`Views` inconsistency.)
 
 ## 8. Centralized Validation — ✅ Fixed (Phase 3)
 
@@ -109,5 +114,7 @@ This list reflects `REMEDIATION_PLAN.md`'s phase order, which refined this order
 2. ✅ **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to `ApplicationListItemViewModel`/`ApplicationWizardViewModel`, update the three view call sites) — done in Phase 2, merged to `main`.
 3. ✅ **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — done in Phase 3, merged to `main`.
 4. ✅ **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a new `IApplicationSummaryService`) — done in Phase 4, merged to `main`. Also closed Rule 3's only open finding.
-5. ✅ **Rule 9** (project the five listed read paths straight to their ViewModels in the service query) — done in Phase 5, on `refactor/phase-5-project-viewmodels` (committed, not yet pushed).
-6. **Rule 7** (resolve the "Domain" naming collision, group `ViewComponents` by feature) — a rename/move, best done last since it touches the most file paths and should land on a clean diff. Not started.
+5. ✅ **Rule 9** (project the five listed read paths straight to their ViewModels in the service query) — done in Phase 5, merged to `main`.
+6. ✅ **Rule 7** (resolved the "Domain" naming collision, grouped `ViewComponents` by feature) — done in Phase 6, on `refactor/phase-6-folder-namespace-cleanup` (committed, not yet pushed). The widest-reaching rename of all 6 phases (72 files touched by the namespace change alone), done last as planned to land on a settled, already-tested codebase.
+
+All 6 phases of `REMEDIATION_PLAN.md` are now complete.

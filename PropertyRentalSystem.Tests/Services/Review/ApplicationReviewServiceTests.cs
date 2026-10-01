@@ -1,5 +1,5 @@
 using PropertyRentalSystem.Web.Data;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Review;
 
 namespace PropertyRentalSystem.Tests.Services.Review;

@@ -1,6 +1,6 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1–4 are done and merged to `main`; Phase 5 is done on `refactor/phase-5-project-viewmodels` (committed, not yet pushed).
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: Phases 1–5 are done and merged to `main`; Phase 6 is done on `refactor/phase-6-folder-namespace-cleanup` (committed, not yet pushed) — **all 6 phases of the plan are now complete**.
 
 ## Summary
 
@@ -10,8 +10,8 @@ Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-ste
 | 2 — Remove duplicated status checks from views | 2, 4 | ✅ Done (merged to main) | 5/5 |
 | 3 — Centralize wizard validation | 8 | ✅ Done (merged to main) | 6/6 |
 | 4 — Move ViewComponent queries into services | 3, 10 | ✅ Done (merged to main) | 3/3 |
-| 5 — Project to ViewModels at the boundary | 9 | ✅ Done (committed, not pushed) | 4/4 |
-| 6 — Resolve folder/namespace boundaries | 7 | ⬜ Not started | 0/3 |
+| 5 — Project to ViewModels at the boundary | 9 | ✅ Done (merged to main) | 4/4 |
+| 6 — Resolve folder/namespace boundaries | 7 | ✅ Done (committed, not pushed) | 3/3 |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done
 
@@ -78,7 +78,7 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 **Verified current state:** `dotnet build`: 0 warnings/0 errors. `dotnet test`: 108/108 passing (105 + 3 new; the 2 `UnitService` tests landed in commit 1, pushing it to 105 first). Manually checked against a running instance after *each* commit: Properties page (unit list), the applicant's Wizard Summary step, and the manager's Review Details page all render identical data to before. EF Core query logs inspected after each commit to confirm no N+1 was introduced — both new methods still produce exactly one SQL statement per call.
 
-**Notes:** Neither `ViewComponent` is grouped by feature yet (still flat in `ViewComponents/`) — that part of Rule 7 is still open, tracked in Phase 6.
+**Notes:** Neither `ViewComponent` was grouped by feature yet at the time (still flat in `ViewComponents/`) — that part of Rule 7 was closed later, in Phase 6.
 
 ---
 
@@ -101,12 +101,15 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 ## Phase 6 — Resolve folder/namespace boundaries (Rule 7)
 
-**Status:** ⬜ Not started — recommended to start last, after Phases 1–5 are done or at least Phase 4 (so `ApplicationSummaryViewComponent`'s final home is already settled).
+**Status:** ✅ Done — split across 3 commits on `refactor/phase-6-folder-namespace-cleanup` (not yet pushed): (1) the Domain-collision resolution, by far the widest-reaching (72 referencing files), (2) a small bonus fix, (3) the ViewComponents grouping. Went beyond the plan's "pick one side of the collision" framing per an explicit requirement that the structure be maximally intuitive, not just non-colliding.
 
-- [ ] Rename either `Domain/Rules` or `Models/Domain` so the two no longer share the "Domain" name; update every `using` across `Controllers/`, `Services/`, `Data/`, `Views/` (`@using`), and `PropertyRentalSystem.Tests/Domain/Rules/`.
-- [ ] Move `ViewComponents/UnitListViewComponent.cs` and `ApplicationSummaryViewComponent.cs` into feature subfolders matching the rest of the tree.
-- [ ] Full solution build + full test suite green; review `git diff --stat` to confirm the change is purely paths/namespaces.
+- [x] **Both** `Domain/Rules` and `Models/Domain` renamed, not just one: `Models/Domain/*.cs` → `Models/*.cs` (namespace `...Models.Domain` → `...Models`, mirrored in `PropertyRentalSystem.Tests`), `Domain/Rules/*.cs` → `BusinessRules/*.cs` (namespace `...Domain.Rules` → `...BusinessRules`). `Models/` now pairs symmetrically with `ViewModels/` — no redundant qualifier, standard ASP.NET MVC convention. Every `using`/`@using` across `Controllers/`, `Services/`, `Data/`, `ViewModels/`, `Views/`, `Migrations/` (see below), and both test projects updated — 72 files touched in total.
+- [x] **Bonus, outside the original scope:** `Models/ErrorViewModel.cs` was loose in `Models/` despite being a ViewModel by every convention here — moved to `ViewModels/Shared/ErrorViewModel.cs`.
+- [x] Moved `ViewComponents/UnitListViewComponent.cs` → `ViewComponents/Units/`, `ApplicationSummaryViewComponent.cs` → `ViewComponents/Applications/`, matching `Services/`/`ViewModels/`/`Views/`. (`Controllers/` itself turned out to still be flat on inspection — not part of this phase's scope, which was specifically the `ViewComponents` vs. `Services`/`ViewModels`/`Views` inconsistency.)
+- [x] Full solution build + full test suite green after each of the 3 commits; `git diff --stat` reviewed — purely paths/namespaces, no logic changes.
 
-**Verified current state:** `Domain/Rules` and `Models/Domain` both still exist as separate, same-named folders; `ViewComponents/` is still flat (no feature subfolders).
+**A risk caught during execution, outside the original plan's checklist:** EF Core's migration snapshot/designer files (`Migrations/ApplicationDbContextModelSnapshot.cs`, `*.Designer.cs`) embed every entity's full CLR namespace as **string literals** used for model-vs-snapshot comparison. Renaming the C# namespace without updating these would desync the snapshot from the code. Updated them as part of the same mechanical replace, then confirmed with `dotnet ef migrations has-pending-model-changes` (reports no changes) that the model is still fully in sync — no phantom migration will be generated.
 
-**Notes:** —
+**Verified current state:** `dotnet build`: 0 warnings/0 errors after each commit. `dotnet test`: 108/108 passing throughout — no test file needed logic changes, only the namespace rename. `dotnet ef migrations has-pending-model-changes`: in sync. Manually checked against a running instance after each commit: My Applications/Browse/Units-Create/Review-list (commit 1, exercising `BusinessRules` + renamed entities), `/Home/Error` + the role-based Home redirect (commit 2), and both ViewComponents resolving correctly by their conventional string name despite the namespace/folder change — verified specifically because that's a runtime lookup a build can't catch (commit 3).
+
+**Notes:** This completes all 6 phases of `REMEDIATION_PLAN.md`.

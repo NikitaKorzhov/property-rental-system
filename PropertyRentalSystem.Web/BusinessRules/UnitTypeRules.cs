@@ -1,4 +1,4 @@
-namespace PropertyRentalSystem.Web.Domain.Rules;
+namespace PropertyRentalSystem.Web.BusinessRules;
 
 public static class UnitTypeRules
 {

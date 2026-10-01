@@ -1,4 +1,4 @@
-namespace PropertyRentalSystem.Web.Models.Domain;
+namespace PropertyRentalSystem.Web.Models;
 
 public class ResidenceHistory
 {

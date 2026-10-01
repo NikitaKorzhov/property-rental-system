@@ -1,6 +1,6 @@
-using PropertyRentalSystem.Web.Domain.Rules;
+using PropertyRentalSystem.Web.BusinessRules;
 
-namespace PropertyRentalSystem.Tests.Domain.Rules;
+namespace PropertyRentalSystem.Tests.BusinessRules;
 
 public class UnitTypeRulesTests
 {

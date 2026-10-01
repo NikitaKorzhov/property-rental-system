@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.Services.Review;
 using PropertyRentalSystem.Web.ViewModels.Review;

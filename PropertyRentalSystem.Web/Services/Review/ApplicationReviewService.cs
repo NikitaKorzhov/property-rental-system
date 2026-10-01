@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
-using PropertyRentalSystem.Web.Domain.Rules;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.BusinessRules;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.ViewModels.Review;
 
 namespace PropertyRentalSystem.Web.Services.Review;

@@ -1,4 +1,4 @@
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.ViewModels.Review;
 
 namespace PropertyRentalSystem.Web.Services.Review;

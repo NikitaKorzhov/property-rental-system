@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using PropertyRentalSystem.Web.Services.Units;
 using PropertyRentalSystem.Web.ViewModels.Units;
 
-namespace PropertyRentalSystem.Web.ViewComponents;
+namespace PropertyRentalSystem.Web.ViewComponents.Units;
 
 public class UnitListViewComponent : ViewComponent
 {

@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.Models;
 
 namespace PropertyRentalSystem.Web.ViewModels.Review;
 

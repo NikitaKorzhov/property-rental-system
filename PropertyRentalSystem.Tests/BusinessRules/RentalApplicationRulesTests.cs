@@ -1,7 +1,7 @@
-using PropertyRentalSystem.Web.Domain.Rules;
-using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.BusinessRules;
+using PropertyRentalSystem.Web.Models;
 
-namespace PropertyRentalSystem.Tests.Domain.Rules;
+namespace PropertyRentalSystem.Tests.BusinessRules;
 
 public class RentalApplicationRulesTests
 {
