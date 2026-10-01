@@ -71,8 +71,12 @@ A full-stack web application built with ASP.NET Core MVC for property management
 PropertyRentalSystem/
 │
 ├── PropertyRentalSystem.Web/
-│   ├── Controllers/                   # Properties, Units, Applications, ApplicationReview, Account, Home
-│   │                                  #   — HTTP/ViewModel glue only, no EF Core or business logic
+│   ├── Controllers/                   # Grouped by feature, like Services/ViewModels/Views
+│   │   ├── Properties/                #   HomeController and ModalFormControllerBase (the shared base
+│   │   ├── Units/                     #   class for every modal-driven controller) stay at the root —
+│   │   ├── Applications/              #   neither belongs to one feature
+│   │   ├── Review/                    #
+│   │   └── Account/                   #   HTTP/ViewModel glue only, no EF Core or business logic
 │   ├── BusinessRules/                 # Pure, DB-free, unit-tested business rules (lease availability,
 │   │                                  #   unit-type assignment, application status/editability rules)
 │   ├── Services/                      # DB-backed orchestration, grouped by feature, one interface + one
@@ -88,7 +92,7 @@ PropertyRentalSystem/
 │   ├── ViewModels/                    # Per-feature view models (Account, Properties, Units, Applications, Review, Shared)
 │   └── Views/                         # Razor views and partials, incl. Views/Shared/Components for view components
 │
-├── PropertyRentalSystem.Tests/        # xUnit test project (108 tests)
+├── PropertyRentalSystem.Tests/        # xUnit test project (116 tests)
 │   ├── BusinessRules/                 # Tests for the pure business rules above
 │   ├── Services/                      # Boundary tests for each service, against EF Core InMemory
 │   │   ├── Properties/
@@ -101,7 +105,7 @@ PropertyRentalSystem/
 └── PropertyRentalSystem.sln
 ```
 
-This structure is the result of a completed architecture cleanup — see [`refactoring_plan/`](refactoring_plan/) for the rules it follows (`ARCHITECTURE_RULES.md`) and the audit confirming compliance (`RULES_COMPLIANCE_AUDIT.md`).
+This structure is the result of a completed architecture cleanup, including a follow-up pass against the original reviewer feedback — see [`refactoring_plan/`](refactoring_plan/) for the rules it follows (`ARCHITECTURE_RULES.md`), the audit confirming compliance (`RULES_COMPLIANCE_AUDIT.md`), and the follow-up findings/plan (`FURTHER_IMPROVEMENTS.md`/`FURTHER_IMPROVEMENTS_PLAN.md`).
 
 ---
 
@@ -205,7 +209,7 @@ You can also register a new account from the sign-up page and pick either role.
 dotnet test
 ```
 
-108 tests across three layers:
+116 tests across three layers:
 - **`BusinessRules`** — the pure business rules that live outside the controllers/services (lease-availability dates, the inactive-unit-type assignment rule, application status/editability rules).
 - **`Services`** — boundary tests for every service (`Properties`, `Units`, `Applications`, `Review`) against the EF Core InMemory provider: filtering, ownership/editability checks, the lease-creation-on-approval flow (including the "unit already has an active lease" rejection), wizard step transitions, and status-history recording.
 - **`ViewModels`** — cross-field validation on the residence-history and review-decision forms.

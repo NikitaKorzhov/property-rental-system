@@ -1,6 +1,6 @@
 # Remediation Status
 
-Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: **all 6 phases of the plan are merged to `main`.** See [`FURTHER_IMPROVEMENTS.md`](FURTHER_IMPROVEMENTS.md) for a fresh post-refactor pass against the original reviewer feedback — 2 small residual findings beyond this plan's original scope.
+Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-step, so progress can be tracked as fixes land. Update this file (check boxes, flip the Status column, fill in Notes) as each step is actually completed in code — it should always reflect what's really in the repo, not what's planned. Verified against the codebase as of **2026-10-01**: **all 6 phases of the plan are merged to `main`.** See [`FURTHER_IMPROVEMENTS.md`](FURTHER_IMPROVEMENTS.md)/[`FURTHER_IMPROVEMENTS_PLAN.md`](FURTHER_IMPROVEMENTS_PLAN.md) for a fresh post-refactor pass against the original reviewer feedback — all 5 commits of that follow-up plan are also done, on `refactor/further-improvements` (pushed, not yet merged to `main`).
 
 ## Summary
 
@@ -11,7 +11,7 @@ Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-ste
 | 3 — Centralize wizard validation | 8 | ✅ Done (merged to main) | 6/6 |
 | 4 — Move ViewComponent queries into services | 3, 10 | ✅ Done (merged to main) | 3/3 |
 | 5 — Project to ViewModels at the boundary | 9 | ✅ Done (merged to main) | 4/4 |
-| 6 — Resolve folder/namespace boundaries | 7 | ✅ Done (committed, not pushed) | 3/3 |
+| 6 — Resolve folder/namespace boundaries | 7 | ✅ Done (merged to main) | 3/3 |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Done
 
@@ -105,7 +105,7 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 - [x] **Both** `Domain/Rules` and `Models/Domain` renamed, not just one: `Models/Domain/*.cs` → `Models/*.cs` (namespace `...Models.Domain` → `...Models`, mirrored in `PropertyRentalSystem.Tests`), `Domain/Rules/*.cs` → `BusinessRules/*.cs` (namespace `...Domain.Rules` → `...BusinessRules`). `Models/` now pairs symmetrically with `ViewModels/` — no redundant qualifier, standard ASP.NET MVC convention. Every `using`/`@using` across `Controllers/`, `Services/`, `Data/`, `ViewModels/`, `Views/`, `Migrations/` (see below), and both test projects updated — 72 files touched in total.
 - [x] **Bonus, outside the original scope:** `Models/ErrorViewModel.cs` was loose in `Models/` despite being a ViewModel by every convention here — moved to `ViewModels/Shared/ErrorViewModel.cs`.
-- [x] Moved `ViewComponents/UnitListViewComponent.cs` → `ViewComponents/Units/`, `ApplicationSummaryViewComponent.cs` → `ViewComponents/Applications/`, matching `Services/`/`ViewModels/`/`Views/`. (`Controllers/` itself turned out to still be flat on inspection — not part of this phase's scope, which was specifically the `ViewComponents` vs. `Services`/`ViewModels`/`Views` inconsistency.)
+- [x] Moved `ViewComponents/UnitListViewComponent.cs` → `ViewComponents/Units/`, `ApplicationSummaryViewComponent.cs` → `ViewComponents/Applications/`, matching `Services/`/`ViewModels/`/`Views/`. (`Controllers/` itself turned out to still be flat on inspection — not part of this phase's scope, which was specifically the `ViewComponents` vs. `Services`/`ViewModels`/`Views` inconsistency. Grouped by feature later, in `FURTHER_IMPROVEMENTS_PLAN.md` Commit 3.)
 - [x] Full solution build + full test suite green after each of the 3 commits; `git diff --stat` reviewed — purely paths/namespaces, no logic changes.
 
 **A risk caught during execution, outside the original plan's checklist:** EF Core's migration snapshot/designer files (`Migrations/ApplicationDbContextModelSnapshot.cs`, `*.Designer.cs`) embed every entity's full CLR namespace as **string literals** used for model-vs-snapshot comparison. Renaming the C# namespace without updating these would desync the snapshot from the code. Updated them as part of the same mechanical replace, then confirmed with `dotnet ef migrations has-pending-model-changes` (reports no changes) that the model is still fully in sync — no phantom migration will be generated.

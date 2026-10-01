@@ -1,5 +1,7 @@
 # Further Improvements — Execution Plan
 
+**✅ Complete.** All 5 commits below are executed, verified (build/test after each, plus a live check against a real SQL Server via Docker for the lease-filtering commits), and pushed to `refactor/further-improvements` — pending merge to `main`. This file is kept as the original plan for reference; it describes the codebase *as it was before* execution, not its current state (see [`CLAUDE.md`](../CLAUDE.md), [`TECHNICAL_SOLUTION.md`](../TECHNICAL_SOLUTION.md), and [`RULES_COMPLIANCE_AUDIT.md`](RULES_COMPLIANCE_AUDIT.md) for that).
+
 Exact, unambiguous instructions for the 5 commits that implement the concrete findings in [`FURTHER_IMPROVEMENTS.md`](FURTHER_IMPROVEMENTS.md) §1, §2, §3, §4, §5. One branch, 5 commits, in the order below.
 
 **Revision history:**
