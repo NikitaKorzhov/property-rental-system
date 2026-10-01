@@ -45,17 +45,7 @@ public class ApplicationsController : ModalFormControllerBase
 
         return View(new ApplicationListViewModel
         {
-            Applications = applications
-                .Select(a => new ApplicationListItemViewModel
-                {
-                    Id = a.Id,
-                    PropertyName = a.Unit.Property.Name,
-                    UnitNumber = a.Unit.UnitNumber,
-                    Status = a.Status,
-                    IsEditable = RentalApplicationRules.IsEditable(a.Status),
-                    CanWithdraw = RentalApplicationRules.IsOpen(a.Status)
-                })
-                .ToList(),
+            Applications = applications,
             SelectedStatus = status,
             SelectedPropertyId = propertyId,
             StatusOptions = Enum.GetValues<ApplicationStatus>()
