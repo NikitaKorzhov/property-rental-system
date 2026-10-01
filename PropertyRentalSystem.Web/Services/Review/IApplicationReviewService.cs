@@ -9,7 +9,8 @@ public interface IApplicationReviewService
     // applications. Projected straight to the ViewModel (Rule 9).
     Task<List<PmApplicationListItemViewModel>> GetFilteredAsync(ApplicationStatus? status, int? propertyId);
 
-    Task<RentalApplication?> GetByIdAsync(int id);
+    // Projected straight to the ViewModel (Rule 9) — History is filled in by the caller afterward.
+    Task<ApplicationDetailsViewModel?> GetDetailsAsync(int id);
 
     // Projected straight to the ViewModel (Rule 9).
     Task<List<StatusHistoryItemViewModel>> GetHistoryAsync(int applicationId);

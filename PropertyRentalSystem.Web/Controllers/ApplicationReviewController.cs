@@ -47,18 +47,14 @@ public class ApplicationReviewController : ModalFormControllerBase
 
     public async Task<IActionResult> Details(int id)
     {
-        var application = await _review.GetByIdAsync(id);
-        if (application == null) return NotFound();
-
-        var history = await _review.GetHistoryAsync(id);
-
-        return View(new ApplicationDetailsViewModel
+        var model = await _review.GetDetailsAsync(id);
+        if (model == null)
         {
-            Id = application.Id,
-            Status = application.Status,
-            CanReview = application.Status == ApplicationStatus.Submitted,
-            History = history
-        });
+            return NotFound();
+        }
+
+        model.History = await _review.GetHistoryAsync(id);
+        return View(model);
     }
 
     [HttpGet]

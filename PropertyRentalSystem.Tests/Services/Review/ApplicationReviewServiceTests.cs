@@ -180,4 +180,30 @@ public class ApplicationReviewServiceTests
         var history = Assert.Single(db.ApplicationStatusHistories);
         Assert.Null(history.Comment);
     }
+
+    [Fact]
+    public async Task GetDetailsAsync_ForExistingApplication_MapsFieldsAndSetsCanReview()
+    {
+        await using var db = TestDb.Create();
+        var (_, _, application) = await SeedAsync(db, ApplicationStatus.Submitted);
+        var service = new ApplicationReviewService(db);
+
+        var result = await service.GetDetailsAsync(application.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(application.Id, result!.Id);
+        Assert.Equal(ApplicationStatus.Submitted, result.Status);
+        Assert.True(result.CanReview);
+    }
+
+    [Fact]
+    public async Task GetDetailsAsync_ForUnknownApplication_ReturnsNull()
+    {
+        await using var db = TestDb.Create();
+        var service = new ApplicationReviewService(db);
+
+        var result = await service.GetDetailsAsync(999);
+
+        Assert.Null(result);
+    }
 }

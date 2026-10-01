@@ -37,7 +37,16 @@ public class ApplicationReviewService : IApplicationReviewService
             .ToListAsync();
     }
 
-    public async Task<RentalApplication?> GetByIdAsync(int id) => await _db.RentalApplications.FindAsync(id);
+    public async Task<ApplicationDetailsViewModel?> GetDetailsAsync(int id) =>
+        await _db.RentalApplications
+            .Where(a => a.Id == id)
+            .Select(a => new ApplicationDetailsViewModel
+            {
+                Id = a.Id,
+                Status = a.Status,
+                CanReview = a.Status == ApplicationStatus.Submitted
+            })
+            .FirstOrDefaultAsync();
 
     public async Task<List<StatusHistoryItemViewModel>> GetHistoryAsync(int applicationId) =>
         await _db.ApplicationStatusHistories
