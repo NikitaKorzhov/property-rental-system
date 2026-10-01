@@ -6,8 +6,9 @@ using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.Services.Review;
 using PropertyRentalSystem.Web.ViewModels.Review;
+using PropertyRentalSystem.Web.Controllers;
 
-namespace PropertyRentalSystem.Web.Controllers;
+namespace PropertyRentalSystem.Web.Controllers.Review;
 
 [Authorize(Roles = Roles.PropertyManager)]
 public class ApplicationReviewController : ModalFormControllerBase

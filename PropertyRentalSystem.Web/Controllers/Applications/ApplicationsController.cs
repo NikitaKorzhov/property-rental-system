@@ -8,8 +8,9 @@ using PropertyRentalSystem.Web.Services.Applications;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.ViewModels.Applications;
 using PropertyRentalSystem.Web.ViewModels.Shared;
+using PropertyRentalSystem.Web.Controllers;
 
-namespace PropertyRentalSystem.Web.Controllers;
+namespace PropertyRentalSystem.Web.Controllers.Applications;
 
 [Authorize(Roles = Roles.Applicant)]
 public class ApplicationsController : ModalFormControllerBase

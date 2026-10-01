@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.ViewModels.Account;
 
-namespace PropertyRentalSystem.Web.Controllers;
+namespace PropertyRentalSystem.Web.Controllers.Account;
 
 public class AccountController : Controller
 {

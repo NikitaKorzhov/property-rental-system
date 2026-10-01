@@ -5,8 +5,10 @@ using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Units;
 using PropertyRentalSystem.Web.ViewModels.Shared;
 using PropertyRentalSystem.Web.ViewModels.Units;
+using PropertyRentalSystem.Web.Controllers;
+using PropertyRentalSystem.Web.Controllers.Properties;
 
-namespace PropertyRentalSystem.Web.Controllers;
+namespace PropertyRentalSystem.Web.Controllers.Units;
 
 [Authorize(Roles = Roles.PropertyManager)]
 public class UnitsController : ModalFormControllerBase
