@@ -73,9 +73,9 @@ The rules below were added after a code-review pass against the current implemen
 
 ## 11. Codebase Hygiene & Consistency
 
-**Rule:** Comments and identifiers are in one language (English) throughout the codebase, and formatting/bracing style is applied consistently file-to-file — not decided per file or per author.
+**Rule:** All names (classes, methods, variables, files, folders), all comments, and all user-facing text (UI labels, validation/error messages, seed data) are in English only, across the **entire solution** — `PropertyRentalSystem.Web` and `PropertyRentalSystem.Tests` alike — and across every config/infrastructure file (`Dockerfile`, `docker-compose.yml`, `db-init/`, `.env.example`, etc.), not just application code. No exceptions, no mixing languages per file or per author. Formatting/bracing style is also applied consistently file-to-file.
 
-**Current gap:** Most of the codebase comments in English, but `Controllers/AccountController.cs` has several comments written in Ukrainian (e.g. `// Реєстрація`, `// Сервер не довіряє тому, що прийшло з форми...`). Standardize on English and sweep the codebase once for stray non-English comments, inconsistent brace/formatting style, and other small inconsistencies before each milestone — this is exactly the kind of mechanical cleanup step 3 of rule 6's refactoring loop should include.
+**Status (as of Phase 1, `REMEDIATION_PLAN.md`):** Fixed. `Controllers/AccountController.cs` had several Ukrainian-language comments and `PropertyRentalSystem.Web/Dockerfile` had Ukrainian-language comments too — the latter wasn't in the original audit's scope (which only scanned `.cs`/`.cshtml`), found during Phase 1 execution by re-running the scan across the whole repo instead. Both are now English. A Cyrillic-range scan across the full solution — `PropertyRentalSystem.Web`, `PropertyRentalSystem.Tests`, every root-level config/infra file, and this plan's own documentation (`.git`/`bin`/`obj`/`.idea` excluded) — now finds none left anywhere.
 
 ## 12. Short, Purpose-Focused Comments
 

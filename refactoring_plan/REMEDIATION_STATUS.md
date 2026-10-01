@@ -6,7 +6,7 @@ Mirrors [`REMEDIATION_PLAN.md`](REMEDIATION_PLAN.md) phase-by-phase, step-by-ste
 
 | Phase | Rule(s) | Status | Progress |
 |---|---|---|---|
-| 1 — Translate non-English comments | 11 | ⬜ Not started | 0/2 |
+| 1 — Translate non-English comments | 11 | ✅ Done (uncommitted) | 2/2 |
 | 2 — Remove duplicated status checks from views | 2, 4 | ⬜ Not started | 0/5 |
 | 3 — Centralize wizard validation | 8 | ⬜ Not started | 0/5 |
 | 4 — Move ViewComponent queries into services | 3, 10 | ⬜ Not started | 0/3 |
@@ -21,14 +21,15 @@ Rule 12 (short, purpose-focused comments) needs no phase of its own — already 
 
 ## Phase 1 — Translate non-English comments (Rule 11)
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done — changes made in the working tree on `refactor/phase-1-translate-comments`, not yet committed.
 
-- [ ] Translate the 7 Ukrainian comments in `Controllers/AccountController.cs` (lines 21, 28, 40, 57, 61, 81, 88) to English.
-- [ ] Re-run the repo-wide non-ASCII scan to confirm no other file has the same issue.
+- [x] Translate the 7 Ukrainian comments in `Controllers/AccountController.cs` (lines 21, 28, 40, 57, 61, 81, 88) to English.
+- [x] Translate the 4 Ukrainian comments in `PropertyRentalSystem.Web/Dockerfile` to English — found by widening the scan to the whole repo, not just `.cs`/`.cshtml`.
+- [x] Re-run the non-ASCII scan across the entire repository to confirm no other file has the same issue.
 
-**Verified current state:** `AccountController.cs` still contains the Ukrainian comments (`// ---------- Реєстрація ----------`, etc.) — unchanged since the audit.
+**Verified current state:** `AccountController.cs` and `Dockerfile` no longer contain any Ukrainian text; a repo-wide non-ASCII scan (`.git`/`bin`/`obj`/`.idea` excluded) returns zero matches anywhere in actual project files. `dotnet build` succeeds with 0 warnings/0 errors.
 
-**Notes:** —
+**Notes:** Uncommitted by request — stage and commit when ready. Rule 11 in `ARCHITECTURE_RULES.md` was also broadened while doing this phase, to explicitly cover names and user-facing text, not just comments.
 
 ---
 

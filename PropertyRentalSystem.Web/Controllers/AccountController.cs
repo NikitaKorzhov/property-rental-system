@@ -18,14 +18,14 @@ public class AccountController : Controller
         _signInManager = signInManager;
     }
 
-    // ---------- Реєстрація ----------
+    // ---------- Registration ----------
     [HttpGet, AllowAnonymous]
     public IActionResult Register() => View(new RegisterViewModel());
 
     [HttpPost, ValidateAntiForgeryToken, AllowAnonymous]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
-        // Сервер не довіряє тому, що прийшло з форми: пропускаємо тільки дві ролі
+        // Server doesn't trust the form: only these two roles are accepted
         if (model.Role != Roles.Applicant && model.Role != Roles.PropertyManager)
             ModelState.AddModelError(nameof(model.Role), "Invalid role.");
 
@@ -37,7 +37,7 @@ public class AccountController : Controller
 
         if (!result.Succeeded)
         {
-            // Помилки Identity: "пароль закороткий", "email зайнятий" і т.д.
+            // Identity errors: "password too short", "email already taken", etc.
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, error.Description);
             return View(model);
@@ -54,11 +54,11 @@ public class AccountController : Controller
             return View(model);
         }
 
-        await _signInManager.SignInAsync(user, isPersistent: false); // одразу залогінити
+        await _signInManager.SignInAsync(user, isPersistent: false); // sign in immediately
         return RedirectToAction("Index", "Home");
     }
 
-    // ---------- Вхід ----------
+    // ---------- Login ----------
     [HttpGet, AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
         => View(new LoginViewModel { ReturnUrl = returnUrl });
@@ -78,14 +78,14 @@ public class AccountController : Controller
             return View(model);
         }
 
-        // Повертаємо тільки на свій сайт, щоб ніхто не підсунув посилання на чужий
+        // Only redirect to our own site, so no one can plant a link to an external one
         if (Url.IsLocalUrl(model.ReturnUrl))
             return Redirect(model.ReturnUrl!);
 
         return RedirectToAction("Index", "Home");
     }
 
-    // ---------- Вихід ----------
+    // ---------- Logout ----------
     [HttpPost, ValidateAntiForgeryToken]
     [Authorize]
     public async Task<IActionResult> Logout()
