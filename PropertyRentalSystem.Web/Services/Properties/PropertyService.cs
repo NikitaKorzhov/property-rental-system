@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Properties;
 
 namespace PropertyRentalSystem.Web.Services.Properties;
 
@@ -13,8 +14,11 @@ public class PropertyService : IPropertyService
         _db = db;
     }
 
-    public async Task<List<Property>> GetAllAsync() =>
-        await _db.Properties.OrderBy(p => p.Name).ToListAsync();
+    public async Task<List<PropertyListItemViewModel>> GetAllAsync() =>
+        await _db.Properties
+            .OrderBy(p => p.Name)
+            .Select(p => new PropertyListItemViewModel { Id = p.Id, Name = p.Name, Address = p.Address })
+            .ToListAsync();
 
     public async Task<Property?> GetByIdAsync(int id) =>
         await _db.Properties.FindAsync(id);

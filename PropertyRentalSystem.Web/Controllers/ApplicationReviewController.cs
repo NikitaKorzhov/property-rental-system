@@ -33,16 +33,7 @@ public class ApplicationReviewController : ModalFormControllerBase
 
         return View(new PmApplicationListViewModel
         {
-            Applications = applications
-                .Select(a => new PmApplicationListItemViewModel
-                {
-                    Id = a.Id,
-                    ApplicantEmail = a.Applicant.Email!,
-                    PropertyName = a.Unit.Property.Name,
-                    UnitNumber = a.Unit.UnitNumber,
-                    Status = a.Status
-                })
-                .ToList(),
+            Applications = applications,
             SelectedStatus = status,
             SelectedPropertyId = propertyId,
             StatusOptions = Enum.GetValues<ApplicationStatus>()
@@ -67,14 +58,6 @@ public class ApplicationReviewController : ModalFormControllerBase
             Status = application.Status,
             CanReview = application.Status == ApplicationStatus.Submitted,
             History = history
-                .Select(h => new StatusHistoryItemViewModel
-                {
-                    Status = h.Status,
-                    ChangedByEmail = h.ChangedBy.Email!,
-                    ChangedAt = h.ChangedAt,
-                    Comment = h.Comment
-                })
-                .ToList()
         });
     }
 

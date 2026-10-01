@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Review;
 
 namespace PropertyRentalSystem.Web.Services.Review;
 
@@ -14,28 +15,41 @@ public class ApplicationReviewService : IApplicationReviewService
         _db = db;
     }
 
-    public async Task<List<RentalApplication>> GetFilteredAsync(ApplicationStatus? status, int? propertyId)
+    public async Task<List<PmApplicationListItemViewModel>> GetFilteredAsync(ApplicationStatus? status, int? propertyId)
     {
-        var query = _db.RentalApplications
-            .Include(a => a.Applicant)
-            .Include(a => a.Unit).ThenInclude(u => u.Property)
-            .AsQueryable();
+        var query = _db.RentalApplications.AsQueryable();
 
         if (status.HasValue)
             query = query.Where(a => a.Status == status.Value);
         if (propertyId.HasValue)
             query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
 
-        return await query.OrderByDescending(a => a.Id).ToListAsync();
+        return await query
+            .OrderByDescending(a => a.Id)
+            .Select(a => new PmApplicationListItemViewModel
+            {
+                Id = a.Id,
+                ApplicantEmail = a.Applicant.Email!,
+                PropertyName = a.Unit.Property.Name,
+                UnitNumber = a.Unit.UnitNumber,
+                Status = a.Status
+            })
+            .ToListAsync();
     }
 
     public async Task<RentalApplication?> GetByIdAsync(int id) => await _db.RentalApplications.FindAsync(id);
 
-    public async Task<List<ApplicationStatusHistory>> GetHistoryAsync(int applicationId) =>
+    public async Task<List<StatusHistoryItemViewModel>> GetHistoryAsync(int applicationId) =>
         await _db.ApplicationStatusHistories
-            .Include(h => h.ChangedBy)
             .Where(h => h.RentalApplicationId == applicationId)
             .OrderBy(h => h.ChangedAt)
+            .Select(h => new StatusHistoryItemViewModel
+            {
+                Status = h.Status,
+                ChangedByEmail = h.ChangedBy.Email!,
+                ChangedAt = h.ChangedAt,
+                Comment = h.Comment
+            })
             .ToListAsync();
 
     public async Task<RentalApplication?> GetReviewableAsync(int id)

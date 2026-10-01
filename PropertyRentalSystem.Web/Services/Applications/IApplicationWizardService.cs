@@ -1,11 +1,13 @@
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Applications;
 
 namespace PropertyRentalSystem.Web.Services.Applications;
 
 public interface IApplicationWizardService
 {
-    // Filtered by status and property, done in the database.
-    Task<List<RentalApplication>> GetMyApplicationsAsync(string applicantId, ApplicationStatus? status, int? propertyId);
+    // Filtered by status and property, done in the database; projected straight to the
+    // ViewModel (Rule 9).
+    Task<List<ApplicationListItemViewModel>> GetMyApplicationsAsync(string applicantId, ApplicationStatus? status, int? propertyId);
 
     Task<RentalApplication?> GetOwnedAsync(int applicationId, string applicantId);
 

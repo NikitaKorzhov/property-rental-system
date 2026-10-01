@@ -107,11 +107,5 @@ public class PropertiesController : ModalFormControllerBase
         RefreshUrl = Url.Action(nameof(List))!
     };
 
-    private async Task<List<PropertyListItemViewModel>> LoadListAsync()
-    {
-        var properties = await _properties.GetAllAsync();
-        return properties
-            .Select(p => new PropertyListItemViewModel { Id = p.Id, Name = p.Name, Address = p.Address })
-            .ToList();
-    }
+    private Task<List<PropertyListItemViewModel>> LoadListAsync() => _properties.GetAllAsync();
 }

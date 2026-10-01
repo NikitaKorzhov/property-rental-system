@@ -1,15 +1,18 @@
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Review;
 
 namespace PropertyRentalSystem.Web.Services.Review;
 
 public interface IApplicationReviewService
 {
-    // Filtered by status and property, done in the database. Property managers see all applications.
-    Task<List<RentalApplication>> GetFilteredAsync(ApplicationStatus? status, int? propertyId);
+    // Filtered by status and property, done in the database. Property managers see all
+    // applications. Projected straight to the ViewModel (Rule 9).
+    Task<List<PmApplicationListItemViewModel>> GetFilteredAsync(ApplicationStatus? status, int? propertyId);
 
     Task<RentalApplication?> GetByIdAsync(int id);
 
-    Task<List<ApplicationStatusHistory>> GetHistoryAsync(int applicationId);
+    // Projected straight to the ViewModel (Rule 9).
+    Task<List<StatusHistoryItemViewModel>> GetHistoryAsync(int applicationId);
 
     // Null unless the application exists and is currently reviewable (Submitted).
     Task<RentalApplication?> GetReviewableAsync(int id);

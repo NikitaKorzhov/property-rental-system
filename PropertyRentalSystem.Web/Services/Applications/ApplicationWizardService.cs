@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Applications;
 
 namespace PropertyRentalSystem.Web.Services.Applications;
 
@@ -14,10 +15,9 @@ public class ApplicationWizardService : IApplicationWizardService
         _db = db;
     }
 
-    public async Task<List<RentalApplication>> GetMyApplicationsAsync(string applicantId, ApplicationStatus? status, int? propertyId)
+    public async Task<List<ApplicationListItemViewModel>> GetMyApplicationsAsync(string applicantId, ApplicationStatus? status, int? propertyId)
     {
         var query = _db.RentalApplications
-            .Include(a => a.Unit).ThenInclude(u => u.Property)
             .Where(a => a.ApplicantId == applicantId);
 
         if (status.HasValue)
@@ -25,7 +25,27 @@ public class ApplicationWizardService : IApplicationWizardService
         if (propertyId.HasValue)
             query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
 
-        return await query.OrderByDescending(a => a.Id).ToListAsync();
+        var applications = await query
+            .OrderByDescending(a => a.Id)
+            .Select(a => new ApplicationListItemViewModel
+            {
+                Id = a.Id,
+                PropertyName = a.Unit.Property.Name,
+                UnitNumber = a.Unit.UnitNumber,
+                Status = a.Status
+            })
+            .ToListAsync();
+
+        // IsEditable/CanWithdraw come from RentalApplicationRules, which EF Core can't
+        // translate to SQL — filled in after materializing the minimal DB projection, so
+        // the status list driving them still has exactly one source of truth.
+        foreach (var application in applications)
+        {
+            application.IsEditable = RentalApplicationRules.IsEditable(application.Status);
+            application.CanWithdraw = RentalApplicationRules.IsOpen(application.Status);
+        }
+
+        return applications;
     }
 
     public async Task<RentalApplication?> GetOwnedAsync(int applicationId, string applicantId)

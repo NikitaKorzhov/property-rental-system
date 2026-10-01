@@ -45,17 +45,7 @@ public class ApplicationsController : ModalFormControllerBase
 
         return View(new ApplicationListViewModel
         {
-            Applications = applications
-                .Select(a => new ApplicationListItemViewModel
-                {
-                    Id = a.Id,
-                    PropertyName = a.Unit.Property.Name,
-                    UnitNumber = a.Unit.UnitNumber,
-                    Status = a.Status,
-                    IsEditable = RentalApplicationRules.IsEditable(a.Status),
-                    CanWithdraw = RentalApplicationRules.IsOpen(a.Status)
-                })
-                .ToList(),
+            Applications = applications,
             SelectedStatus = status,
             SelectedPropertyId = propertyId,
             StatusOptions = Enum.GetValues<ApplicationStatus>()
@@ -71,20 +61,11 @@ public class ApplicationsController : ModalFormControllerBase
 
     public async Task<IActionResult> Browse(int? propertyId, int? unitTypeId, int? bedrooms, decimal? maxRent)
     {
-        var units = await _browse.GetAvailableUnitsAsync(propertyId, unitTypeId, bedrooms, maxRent);
+        var unitViewModels = await _browse.GetAvailableUnitsAsync(propertyId, unitTypeId, bedrooms, maxRent);
         var openApplicationsByUnit = await _browse.GetOpenApplicationUnitMapAsync(CurrentUserId);
 
-        var unitViewModels = units.Select(u => new BrowseUnitViewModel
-        {
-            Id = u.Id,
-            PropertyName = u.Property.Name,
-            PropertyAddress = u.Property.Address,
-            UnitNumber = u.UnitNumber,
-            Bedrooms = u.Bedrooms,
-            MonthlyRent = u.MonthlyRent,
-            UnitTypeName = u.UnitType.Name,
-            ExistingApplicationId = openApplicationsByUnit.TryGetValue(u.Id, out var appId) ? appId : null
-        }).ToList();
+        foreach (var unit in unitViewModels)
+            unit.ExistingApplicationId = openApplicationsByUnit.TryGetValue(unit.Id, out var appId) ? appId : null;
 
         var properties = await _properties.GetAllAsync();
         var unitTypes = await _browse.GetUnitTypesAsync();

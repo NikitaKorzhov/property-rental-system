@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Applications;
 
 namespace PropertyRentalSystem.Web.Services.Applications;
 
@@ -14,7 +15,7 @@ public class ApplicationBrowseService : IApplicationBrowseService
         _db = db;
     }
 
-    public async Task<List<Unit>> GetAvailableUnitsAsync(int? propertyId, int? unitTypeId, int? bedrooms, decimal? maxRent)
+    public async Task<List<BrowseUnitViewModel>> GetAvailableUnitsAsync(int? propertyId, int? unitTypeId, int? bedrooms, decimal? maxRent)
     {
         var today = DateTime.UtcNow.Date;
 
@@ -26,8 +27,6 @@ public class ApplicationBrowseService : IApplicationBrowseService
             .ToHashSet();
 
         var query = _db.Units
-            .Include(u => u.Property)
-            .Include(u => u.UnitType)
             .Where(u => !unavailableUnitIds.Contains(u.Id));
 
         if (propertyId.HasValue)
@@ -39,7 +38,19 @@ public class ApplicationBrowseService : IApplicationBrowseService
         if (maxRent.HasValue)
             query = query.Where(u => u.MonthlyRent <= maxRent.Value);
 
-        return await query.OrderBy(u => u.Property.Name).ThenBy(u => u.UnitNumber).ToListAsync();
+        return await query
+            .OrderBy(u => u.Property.Name).ThenBy(u => u.UnitNumber)
+            .Select(u => new BrowseUnitViewModel
+            {
+                Id = u.Id,
+                PropertyName = u.Property.Name,
+                PropertyAddress = u.Property.Address,
+                UnitNumber = u.UnitNumber,
+                Bedrooms = u.Bedrooms,
+                MonthlyRent = u.MonthlyRent,
+                UnitTypeName = u.UnitType.Name
+            })
+            .ToListAsync();
     }
 
     public async Task<Dictionary<int, int>> GetOpenApplicationUnitMapAsync(string applicantId) =>
