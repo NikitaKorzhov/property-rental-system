@@ -8,7 +8,9 @@ public static class UnitTypeRules
     public static bool CanAssign(bool candidateIsActive, int candidateUnitTypeId, int? currentUnitTypeId)
     {
         if (currentUnitTypeId.HasValue && candidateUnitTypeId == currentUnitTypeId.Value)
+        {
             return true; // left unchanged, allowed even if inactive
+        }
 
         return candidateIsActive;
     }

@@ -12,7 +12,9 @@ public class HomeController : Controller
     public IActionResult Index()
     {
         if (User.IsInRole(Roles.Applicant))
+        {
             return RedirectToAction("Browse", "Applications");
+        }
 
         return View();
     }

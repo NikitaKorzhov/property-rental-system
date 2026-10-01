@@ -45,7 +45,9 @@ public class PropertyService : IPropertyService
     {
         var hasUnits = await _db.Units.AnyAsync(u => u.PropertyId == property.Id);
         if (hasUnits)
+        {
             return ServiceResult.Fail("Can't delete a property that still has units. Remove its units first.");
+        }
 
         _db.Properties.Remove(property);
         await _db.SaveChangesAsync();

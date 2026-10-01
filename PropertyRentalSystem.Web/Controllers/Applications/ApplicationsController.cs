@@ -8,8 +8,9 @@ using PropertyRentalSystem.Web.Services.Applications;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.ViewModels.Applications;
 using PropertyRentalSystem.Web.ViewModels.Shared;
+using PropertyRentalSystem.Web.Controllers;
 
-namespace PropertyRentalSystem.Web.Controllers;
+namespace PropertyRentalSystem.Web.Controllers.Applications;
 
 [Authorize(Roles = Roles.Applicant)]
 public class ApplicationsController : ModalFormControllerBase
@@ -65,7 +66,9 @@ public class ApplicationsController : ModalFormControllerBase
         var openApplicationsByUnit = await _browse.GetOpenApplicationUnitMapAsync(CurrentUserId);
 
         foreach (var unit in unitViewModels)
+        {
             unit.ExistingApplicationId = openApplicationsByUnit.TryGetValue(unit.Id, out var appId) ? appId : null;
+        }
 
         var properties = await _properties.GetAllAsync();
         var unitTypes = await _browse.GetUnitTypesAsync();
@@ -94,7 +97,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> Start(int unitId)
     {
         var unit = await _browse.GetUnitAsync(unitId);
-        if (unit == null) return NotFound();
+        if (unit == null)
+        {
+            return NotFound();
+        }
 
         var currentUser = await _userManager.GetUserAsync(User);
         var result = await _browse.StartApplicationAsync(unit, CurrentUserId, currentUser?.Email);
@@ -113,7 +119,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> Wizard(int id)
     {
         var application = await _wizard.GetOwnedAsync(id, CurrentUserId);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         var step = _wizard.DetermineStep(application);
         var reviewComment = await _wizard.GetReviewCommentAsync(application);
@@ -124,7 +133,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> Wizard(ApplicationWizardViewModel model, string action)
     {
         var application = await _wizard.GetOwnedAsync(model.Id, CurrentUserId);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         var reviewComment = await _wizard.GetReviewCommentAsync(application);
 
@@ -133,7 +145,9 @@ public class ApplicationsController : ModalFormControllerBase
         // old page) shouldn't dead-end on a blank error — send the user back to the wizard,
         // which recomputes the real current step from the database.
         if (!RentalApplicationRules.IsEditable(application.Status))
+        {
             return RedirectToAction(nameof(Wizard), new { id = application.Id });
+        }
 
         switch (action)
         {
@@ -146,14 +160,19 @@ public class ApplicationsController : ModalFormControllerBase
 
             case "Continue" when model.Step == WizardStep.ApplicantInfo:
                 if (!ModelState.IsValid)
+                {
                     return View(BuildViewModel(application, WizardStep.ApplicantInfo, model, reviewComment));
+                }
 
                 var infoResult = await _wizard.SaveApplicantInfoAsync(
                     application, model.FullName, model.Phone, model.Email, model.CurrentAddress);
                 if (!infoResult.Succeeded)
                 {
                     foreach (var error in infoResult.Errors)
+                    {
                         ModelState.AddModelError(error.Field, error.Message);
+                    }
+
                     return View(BuildViewModel(application, WizardStep.ApplicantInfo, model, reviewComment));
                 }
 
@@ -171,7 +190,10 @@ public class ApplicationsController : ModalFormControllerBase
                 if (!submitResult.Succeeded)
                 {
                     foreach (var error in submitResult.Errors)
+                    {
                         ModelState.AddModelError(error.Field, error.Message);
+                    }
+
                     return View(BuildViewModel(application, WizardStep.Summary, reviewComment: reviewComment));
                 }
 
@@ -191,7 +213,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> AddResidence(int applicationId)
     {
         var application = await _residences.GetOwnedEditableApplicationAsync(applicationId, CurrentUserId);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("_ResidenceForm", new ResidenceHistoryFormViewModel { RentalApplicationId = applicationId });
     }
@@ -200,10 +225,15 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> AddResidence(ResidenceHistoryFormViewModel model)
     {
         var application = await _residences.GetOwnedEditableApplicationAsync(model.RentalApplicationId, CurrentUserId);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         if (!ModelState.IsValid)
+        {
             return PartialView("_ResidenceForm", model);
+        }
 
         await _residences.AddAsync(
             model.RentalApplicationId, model.Address, model.LandlordName, model.LandlordPhone, model.MoveInDate, model.MoveOutDate);
@@ -215,7 +245,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> EditResidence(int id)
     {
         var residence = await _residences.GetOwnedEditableResidenceAsync(id, CurrentUserId);
-        if (residence == null) return NotFound();
+        if (residence == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("_ResidenceForm", new ResidenceHistoryFormViewModel
         {
@@ -232,13 +265,21 @@ public class ApplicationsController : ModalFormControllerBase
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> EditResidence(int id, ResidenceHistoryFormViewModel model)
     {
-        if (id != model.Id) return BadRequest();
+        if (id != model.Id)
+        {
+            return BadRequest();
+        }
 
         var residence = await _residences.GetOwnedEditableResidenceAsync(id, CurrentUserId);
-        if (residence == null) return NotFound();
+        if (residence == null)
+        {
+            return NotFound();
+        }
 
         if (!ModelState.IsValid)
+        {
             return PartialView("_ResidenceForm", model);
+        }
 
         await _residences.UpdateAsync(
             residence, model.Address, model.LandlordName, model.LandlordPhone, model.MoveInDate, model.MoveOutDate);
@@ -250,7 +291,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> DeleteResidenceConfirm(int id)
     {
         var residence = await _residences.GetOwnedEditableResidenceAsync(id, CurrentUserId);
-        if (residence == null) return NotFound();
+        if (residence == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", new ConfirmDeleteViewModel
         {
@@ -266,7 +310,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> DeleteResidence(int id)
     {
         var residence = await _residences.GetOwnedEditableResidenceAsync(id, CurrentUserId);
-        if (residence == null) return NotFound();
+        if (residence == null)
+        {
+            return NotFound();
+        }
 
         await _residences.DeleteAsync(residence);
         return FormSuccess();
@@ -277,7 +324,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> ResidenceHistorySection(int applicationId)
     {
         var application = await _wizard.GetOwnedAsync(applicationId, CurrentUserId);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("_ResidenceHistorySection", BuildViewModel(application, WizardStep.ResidenceHistory));
     }
@@ -288,7 +338,10 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> WithdrawConfirm(int id)
     {
         var application = await _wizard.GetOwnedAsync(id, CurrentUserId);
-        if (application == null || !RentalApplicationRules.IsOpen(application.Status)) return NotFound();
+        if (application == null || !RentalApplicationRules.IsOpen(application.Status))
+        {
+            return NotFound();
+        }
 
         return PartialView("~/Views/Shared/_ConfirmDelete.cshtml", new ConfirmDeleteViewModel
         {
@@ -304,11 +357,16 @@ public class ApplicationsController : ModalFormControllerBase
     public async Task<IActionResult> Withdraw(int id)
     {
         var application = await _wizard.GetOwnedAsync(id, CurrentUserId);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         var result = await _wizard.WithdrawAsync(application, CurrentUserId);
         if (!result.Succeeded)
+        {
             return NotFound();
+        }
 
         return FormSuccess();
     }

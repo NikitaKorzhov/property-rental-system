@@ -6,8 +6,9 @@ using PropertyRentalSystem.Web.Models;
 using PropertyRentalSystem.Web.Services.Properties;
 using PropertyRentalSystem.Web.Services.Review;
 using PropertyRentalSystem.Web.ViewModels.Review;
+using PropertyRentalSystem.Web.Controllers;
 
-namespace PropertyRentalSystem.Web.Controllers;
+namespace PropertyRentalSystem.Web.Controllers.Review;
 
 [Authorize(Roles = Roles.PropertyManager)]
 public class ApplicationReviewController : ModalFormControllerBase
@@ -47,25 +48,24 @@ public class ApplicationReviewController : ModalFormControllerBase
 
     public async Task<IActionResult> Details(int id)
     {
-        var application = await _review.GetByIdAsync(id);
-        if (application == null) return NotFound();
-
-        var history = await _review.GetHistoryAsync(id);
-
-        return View(new ApplicationDetailsViewModel
+        var model = await _review.GetDetailsAsync(id);
+        if (model == null)
         {
-            Id = application.Id,
-            Status = application.Status,
-            CanReview = application.Status == ApplicationStatus.Submitted,
-            History = history
-        });
+            return NotFound();
+        }
+
+        model.History = await _review.GetHistoryAsync(id);
+        return View(model);
     }
 
     [HttpGet]
     public async Task<IActionResult> ReviewConfirm(int id)
     {
         var application = await _review.GetReviewableAsync(id);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         return PartialView("_ReviewForm", new ReviewFormViewModel { Id = id });
     }
@@ -74,16 +74,24 @@ public class ApplicationReviewController : ModalFormControllerBase
     public async Task<IActionResult> Review(ReviewFormViewModel model)
     {
         var application = await _review.GetReviewableAsync(model.Id);
-        if (application == null) return NotFound();
+        if (application == null)
+        {
+            return NotFound();
+        }
 
         if (!ModelState.IsValid)
+        {
             return PartialView("_ReviewForm", model);
+        }
 
         var result = await _review.ReviewAsync(application, model.Outcome!.Value, model.Comment, CurrentUserId);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
+            {
                 ModelState.AddModelError(error.Field, error.Message);
+            }
+
             return PartialView("_ReviewForm", model);
         }
 

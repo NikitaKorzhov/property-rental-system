@@ -77,6 +77,8 @@ The rules below were added after a code-review pass against the current implemen
 
 **Status (as of Phase 1, `REMEDIATION_PLAN.md`):** Fixed. `Controllers/AccountController.cs` had several Ukrainian-language comments and `PropertyRentalSystem.Web/Dockerfile` had Ukrainian-language comments too — the latter wasn't in the original audit's scope (which only scanned `.cs`/`.cshtml`), found during Phase 1 execution by re-running the scan across the whole repo instead. Both are now English. A Cyrillic-range scan across the full solution — `PropertyRentalSystem.Web`, `PropertyRentalSystem.Tests`, every root-level config/infra file, and this plan's own documentation (`.git`/`bin`/`obj`/`.idea` excluded) — now finds none left anywhere.
 
+The bracing half of this rule (consistent formatting file-to-file) is, as of `refactoring_plan/FURTHER_IMPROVEMENTS_PLAN.md` Commit 5, mechanically enforced rather than just manually followed: a repo-root `.editorconfig` sets `csharp_prefer_braces = true:warning`/`dotnet_diagnostic.IDE0011.severity = warning`, and `dotnet format style --diagnostics IDE0011` was run once to bring every pre-existing brace-less single-statement `if`/`else` body into line. New code that omits braces now shows as a build warning instead of relying on a reviewer to catch it.
+
 ## 12. Short, Purpose-Focused Comments
 
 **Rule:** A comment is one or two lines, and explains *why* the code does something non-obvious — not *what* it does (the code already says that) or a running narration of the logic. If an explanation needs more than a couple of lines, that's usually a sign the code itself needs a clearer name, a smaller method, or a short pointer — not a longer comment.

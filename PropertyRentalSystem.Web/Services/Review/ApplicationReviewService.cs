@@ -20,9 +20,14 @@ public class ApplicationReviewService : IApplicationReviewService
         var query = _db.RentalApplications.AsQueryable();
 
         if (status.HasValue)
+        {
             query = query.Where(a => a.Status == status.Value);
+        }
+
         if (propertyId.HasValue)
+        {
             query = query.Where(a => a.Unit.PropertyId == propertyId.Value);
+        }
 
         return await query
             .OrderByDescending(a => a.Id)
@@ -37,7 +42,16 @@ public class ApplicationReviewService : IApplicationReviewService
             .ToListAsync();
     }
 
-    public async Task<RentalApplication?> GetByIdAsync(int id) => await _db.RentalApplications.FindAsync(id);
+    public async Task<ApplicationDetailsViewModel?> GetDetailsAsync(int id) =>
+        await _db.RentalApplications
+            .Where(a => a.Id == id)
+            .Select(a => new ApplicationDetailsViewModel
+            {
+                Id = a.Id,
+                Status = a.Status,
+                CanReview = a.Status == ApplicationStatus.Submitted
+            })
+            .FirstOrDefaultAsync();
 
     public async Task<List<StatusHistoryItemViewModel>> GetHistoryAsync(int applicationId) =>
         await _db.ApplicationStatusHistories
@@ -62,34 +76,51 @@ public class ApplicationReviewService : IApplicationReviewService
     {
         // Controllers reject posts that are not allowed: only a Submitted application can be reviewed.
         if (application.Status != ApplicationStatus.Submitted)
-            return ServiceResult.Fail("This application can no longer be reviewed.");
-
-        if (outcome == ReviewOutcome.Approve)
         {
-            var today = DateTime.UtcNow.Date;
-            var unitLeases = await _db.Leases.Where(l => l.UnitId == application.UnitId).ToListAsync();
-            if (unitLeases.Any(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, today)))
+            return ServiceResult.Fail("This application can no longer be reviewed.");
+        }
+
+        switch (outcome)
+        {
+            case ReviewOutcome.Approve:
             {
-                // The approval check prevents a second lease. Other open applications for
-                // this unit are left as they are — only this one is rejected.
-                return ServiceResult.Fail("This unit already has an active lease. Approval is blocked to prevent a second lease.");
+                var today = DateTime.UtcNow.Date;
+                var hasActiveLease = await _db.Leases
+                    .Where(l => l.UnitId == application.UnitId)
+                    .AnyAsync(LeaseRules.IsActiveOn(today));
+                if (hasActiveLease)
+                {
+                    // The approval check prevents a second lease. Other open applications for
+                    // this unit are left as they are — only this one is rejected.
+                    return ServiceResult.Fail("This unit already has an active lease. Approval is blocked to prevent a second lease.");
+                }
+
+                application.Status = ApplicationStatus.Approved;
+                application.Lease = new Lease
+                {
+                    UnitId = application.UnitId,
+                    StartDate = today,
+                    EndDate = LeaseRules.ComputeEndDate(today)
+                };
+                break;
             }
 
-            application.Status = ApplicationStatus.Approved;
-            application.Lease = new Lease
+            case ReviewOutcome.Return:
             {
-                UnitId = application.UnitId,
-                StartDate = today,
-                EndDate = LeaseRules.ComputeEndDate(today)
-            };
-        }
-        else if (outcome == ReviewOutcome.Return)
-        {
-            application.Status = ApplicationStatus.Returned;
-        }
-        else
-        {
-            application.Status = ApplicationStatus.Denied;
+                application.Status = ApplicationStatus.Returned;
+                break;
+            }
+
+            case ReviewOutcome.Deny:
+            {
+                application.Status = ApplicationStatus.Denied;
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null);
+            }
         }
 
         _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory

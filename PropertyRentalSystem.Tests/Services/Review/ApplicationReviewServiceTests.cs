@@ -118,6 +118,21 @@ public class ApplicationReviewServiceTests
     }
 
     [Fact]
+    public async Task ReviewAsync_ApproveWhenLeaseEndsExactlyToday_StillCountsAsActiveAndFails()
+    {
+        await using var db = TestDb.Create();
+        var (_, unit, application) = await SeedAsync(db);
+        var today = DateTime.UtcNow.Date;
+        db.Leases.Add(new Lease { UnitId = unit.Id, StartDate = today.AddDays(-30), EndDate = today });
+        await db.SaveChangesAsync();
+        var service = new ApplicationReviewService(db);
+
+        var result = await service.ReviewAsync(application, ReviewOutcome.Approve, null, "manager-1");
+
+        Assert.False(result.Succeeded);
+    }
+
+    [Fact]
     public async Task ReviewAsync_ApproveWhenUnitIsFree_CreatesA364DayLeaseAndApprovesTheApplication()
     {
         await using var db = TestDb.Create();
@@ -164,5 +179,31 @@ public class ApplicationReviewServiceTests
 
         var history = Assert.Single(db.ApplicationStatusHistories);
         Assert.Null(history.Comment);
+    }
+
+    [Fact]
+    public async Task GetDetailsAsync_ForExistingApplication_MapsFieldsAndSetsCanReview()
+    {
+        await using var db = TestDb.Create();
+        var (_, _, application) = await SeedAsync(db, ApplicationStatus.Submitted);
+        var service = new ApplicationReviewService(db);
+
+        var result = await service.GetDetailsAsync(application.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(application.Id, result!.Id);
+        Assert.Equal(ApplicationStatus.Submitted, result.Status);
+        Assert.True(result.CanReview);
+    }
+
+    [Fact]
+    public async Task GetDetailsAsync_ForUnknownApplication_ReturnsNull()
+    {
+        await using var db = TestDb.Create();
+        var service = new ApplicationReviewService(db);
+
+        var result = await service.GetDetailsAsync(999);
+
+        Assert.Null(result);
     }
 }
