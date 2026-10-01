@@ -19,15 +19,8 @@ public class ApplicationBrowseService : IApplicationBrowseService
     {
         var today = DateTime.UtcNow.Date;
 
-        // Narrow to not-yet-expired leases in SQL, then apply the exact "covers today" rule
-        // in memory so the same LeaseRules.CoversDate logic is what gets unit-tested.
-        var unavailableUnitIds = (await _db.Leases.Where(l => l.EndDate >= today).ToListAsync())
-            .Where(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, today))
-            .Select(l => l.UnitId)
-            .ToHashSet();
-
         var query = _db.Units
-            .Where(u => !unavailableUnitIds.Contains(u.Id));
+            .Where(u => !_db.Leases.Where(l => l.UnitId == u.Id).Any(LeaseRules.IsActiveOn(today)));
 
         if (propertyId.HasValue)
             query = query.Where(u => u.PropertyId == propertyId.Value);
@@ -69,9 +62,13 @@ public class ApplicationBrowseService : IApplicationBrowseService
     public async Task<ServiceResult<RentalApplication>> StartApplicationAsync(Unit unit, string applicantId, string? applicantEmail)
     {
         var today = DateTime.UtcNow.Date;
-        var unitLeases = await _db.Leases.Where(l => l.UnitId == unit.Id).ToListAsync();
-        if (unitLeases.Any(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, today)))
+        var hasActiveLease = await _db.Leases
+            .Where(l => l.UnitId == unit.Id)
+            .AnyAsync(LeaseRules.IsActiveOn(today));
+        if (hasActiveLease)
+        {
             return ServiceResult<RentalApplication>.Fail("This unit is no longer available.");
+        }
 
         var existing = await _db.RentalApplications.FirstOrDefaultAsync(a =>
             a.ApplicantId == applicantId && a.UnitId == unit.Id && RentalApplicationRules.OpenStatuses.Contains(a.Status));

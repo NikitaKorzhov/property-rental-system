@@ -121,9 +121,13 @@ public class ApplicationWizardService : IApplicationWizardService
             return ServiceResult.Fail("Complete both sections before submitting.");
 
         var today = DateTime.UtcNow.Date;
-        var unitLeases = await _db.Leases.Where(l => l.UnitId == application.UnitId).ToListAsync();
-        if (unitLeases.Any(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, today)))
+        var hasActiveLease = await _db.Leases
+            .Where(l => l.UnitId == application.UnitId)
+            .AnyAsync(LeaseRules.IsActiveOn(today));
+        if (hasActiveLease)
+        {
             return ServiceResult.Fail("This unit currently has an active lease and can't accept new applications.");
+        }
 
         application.Status = ApplicationStatus.Submitted;
         _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory
