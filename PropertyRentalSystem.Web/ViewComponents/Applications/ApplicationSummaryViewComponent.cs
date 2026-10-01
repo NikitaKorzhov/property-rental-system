@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PropertyRentalSystem.Web.Services.Applications;
 
-namespace PropertyRentalSystem.Web.ViewComponents;
+namespace PropertyRentalSystem.Web.ViewComponents.Applications;
 
 // Read-only "both sections" view used by the wizard's Summary step and the property
 // manager's review details page.
