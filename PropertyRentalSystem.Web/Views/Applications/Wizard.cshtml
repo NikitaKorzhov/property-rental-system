@@ -63,7 +63,7 @@
     </div>
 </form>
 
-@if (Model.Status is ApplicationStatus.Draft or ApplicationStatus.Submitted or ApplicationStatus.Returned)
+@if (Model.CanWithdraw)
 {
     <a href="#" class="btn btn-outline-danger btn-sm mt-2"
        data-modal-url="@Url.Action("WithdrawConfirm", new { id = Model.Id })">Withdraw Application</a>

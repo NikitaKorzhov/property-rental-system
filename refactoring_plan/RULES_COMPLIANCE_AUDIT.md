@@ -7,9 +7,9 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 | Rule | Status |
 |---|---|
 | 1. Skinny Controllers | ✅ Compliant |
-| 2. Business Logic in Services | ⚠️ Partial violations |
+| 2. Business Logic in Services | ✅ Fixed (Phase 2) |
 | 3. Separate Data Access | ⚠️ Partial violations |
-| 4. Clean Razor Views | ⚠️ Partial violations |
+| 4. Clean Razor Views | ✅ Fixed (Phase 2) |
 | 5. DTOs / Type Safety | ✅ Compliant |
 | 6. Strangler-Fig Refactoring | ➖ Not applicable to a static snapshot |
 | 7. Folder / Module Boundaries | ❌ Violations found |
@@ -25,27 +25,19 @@ A rule-by-rule audit of the current codebase against [`ARCHITECTURE_RULES.md`](A
 
 No controller contains a direct `DbContext` call, LINQ query, or `SaveChangesAsync`: a repo-wide search for `_db.`, `context.`, `.Where(`, `.Include(`, `.FirstOrDefault`, `.ToListAsync`, `.SaveChangesAsync` inside `Controllers/` returns zero matches. Every action follows the accept-request → call-service → return-response shape. `ApplicationsController.BuildViewModel` and the `BuildDeleteConfirmModel` helpers in `PropertiesController`/`UnitsController` only assemble a ViewModel from data already returned by a service — that's response-shaping, not business logic, so it stays within the rule, though it does feed directly into the Rule 9 finding below (that assembly work could move into the service instead).
 
-## 2. Extract Business Logic into Services — ⚠️ Partial violations
+## 2. Extract Business Logic into Services — ✅ Fixed (Phase 2)
 
-The application-status "open"/"editable" business rule (`Domain/Rules/RentalApplicationRules.IsOpen` / `IsEditable`) is re-implemented inline, a second time, directly in Razor markup instead of being read from a precomputed ViewModel flag:
+Originally found: the application-status "open"/"editable" business rule (`Domain/Rules/RentalApplicationRules.IsOpen` / `IsEditable`) was re-implemented inline, a second time, directly in Razor markup instead of being read from a precomputed ViewModel flag, in `Views/Applications/Wizard.cshtml:66` and `Views/Applications/Index.cshtml:65,67`. `ApplicationListItemViewModel` and `ApplicationWizardViewModel` now carry `IsEditable`/`CanWithdraw` flags computed once in `ApplicationsController` via `RentalApplicationRules`, and both views read those flags instead of re-deriving the status list themselves — verified both in the test suite (99/99 passing) and manually against a running instance across all 6 statuses (see the Phase 2 verification notes in `REMEDIATION_STATUS.md`).
 
-- `Views/Applications/Wizard.cshtml:66` — `@if (Model.Status is ApplicationStatus.Draft or ApplicationStatus.Submitted or ApplicationStatus.Returned)` duplicates `RentalApplicationRules.IsOpen`.
-- `Views/Applications/Index.cshtml:65` — `@(app.Status is ApplicationStatus.Draft or ApplicationStatus.Returned ? "Continue" : "View")` duplicates `RentalApplicationRules.IsEditable`.
-- `Views/Applications/Index.cshtml:67` — the same `Draft or Submitted or Returned` condition as the Wizard case, duplicating `IsOpen` again.
-
-Because this is the exact status list already centralized in `RentalApplicationRules`, a future status change (e.g. adding a new open status) requires updating the rule class *and* finding and updating these three view-level copies — exactly what Rule 2 exists to prevent. `ApplicationWizardViewModel.IsEditable` already shows the right pattern (a boolean computed once in the controller/service and simply branched on in the view); `ApplicationListItemViewModel` and `PmApplicationListItemViewModel` don't yet have the equivalent `IsEditable`/`CanWithdraw` flags, which is why the views fell back to re-deriving it themselves.
-
-This also overlaps with the Rule 8 finding below: `ApplicationWizardService.SaveApplicantInfoAsync` (`Services/Applications/ApplicationWizardService.cs:71-99`) hand-rolls required-field and email-format checks with `string.IsNullOrWhiteSpace`/`EmailAddressAttribute` inside the service, rather than expressing them as `DataAnnotations` on `ApplicationWizardViewModel` the way every other form in the app does — see Rule 8 for detail.
+**Still open, tracked separately under Rule 8:** `ApplicationWizardService.SaveApplicantInfoAsync` (`Services/Applications/ApplicationWizardService.cs:71-99`) still hand-rolls required-field and email-format checks with `string.IsNullOrWhiteSpace`/`EmailAddressAttribute` inside the service, rather than expressing them as `DataAnnotations` on `ApplicationWizardViewModel` the way every other form in the app does. Phase 2 didn't touch this — it's Phase 3's job.
 
 ## 3. Separate Data Access — ⚠️ Partial violations
 
 See Rule 10 below (same underlying finding, from the data-access-layering angle): `UnitListViewComponent` and `ApplicationSummaryViewComponent` query `ApplicationDbContext` directly rather than through a service, which is a direct-DbContext-access path outside the layer Rule 3 reserves for it. Controllers themselves are clean (see Rule 1).
 
-## 4. Keep Razor Views Clean — ⚠️ Partial violations
+## 4. Keep Razor Views Clean — ✅ Fixed (Phase 2)
 
-No view injects `DbContext` or a service directly — a repo-wide search for `@inject` across `Views/` returns zero matches, so the "query the database directly from a view" failure mode doesn't occur. However, the three inline status-membership checks listed under Rule 2 (`Wizard.cshtml:66`, `Index.cshtml:65`, `Index.cshtml:67`) are exactly the kind of "complex logical operation" Rule 4 asks to keep out of `.cshtml` files — a multi-value business condition, not a simple display branch. By contrast, `Views/Shared/_StatusBadge.cshtml`'s `switch` from `ApplicationStatus` to a Bootstrap CSS class, and `Wizard.cshtml:18-20`'s `Denied ? "alert-danger" : "alert-warning"` wording choice, are purely presentational mappings (label/color, not a business decision) and are fine as-is.
-
-**Fix for both Rule 2 and Rule 4:** add `IsEditable`/`CanWithdraw` (or similar) booleans to `ApplicationListItemViewModel` and `PmApplicationListItemViewModel`, computed once via `RentalApplicationRules` where the ViewModel is built, and have the three view call sites read those flags instead of re-deriving them.
+No view injects `DbContext` or a service directly — a repo-wide search for `@inject` across `Views/` returns zero matches, so the "query the database directly from a view" failure mode doesn't occur. The three inline status-membership checks that used to live in `Wizard.cshtml:66`, `Index.cshtml:65`, and `Index.cshtml:67` (the same "complex logical operation" flagged under Rule 2) are gone — both views now read the precomputed `IsEditable`/`CanWithdraw` flags instead. `Index.cshtml`'s now-unused `@using PropertyRentalSystem.Web.Models.Domain` was removed as part of the same fix. `Views/Shared/_StatusBadge.cshtml`'s `switch` from `ApplicationStatus` to a Bootstrap CSS class, and `Wizard.cshtml:18-20`'s `Denied ? "alert-danger" : "alert-warning"` wording choice, remain — both are purely presentational mappings (label/color, not a business decision), so they were correctly left alone.
 
 ## 5. Type Safety & DTOs — ✅ Compliant
 
@@ -104,9 +96,11 @@ A scan for `/* */` block comments across `PropertyRentalSystem.Web` returns zero
 
 ## Suggested fix order
 
-1. **Rule 11** (translate the seven comments in `AccountController.cs` to English) — mechanical, zero risk, do first.
-2. **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — contained to one view model + one service method, has existing test coverage to refactor against (per Rule 6).
-3. **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to the two list ViewModels, update the three view call sites) — small, testable, removes the duplicated business rule from Razor.
-4. **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/`IApplicationWizardService`) — closes the one data-access-boundary gap.
-5. **Rule 9** (project the five listed read paths straight to their ViewModels in the service query, following `UnitListViewComponent`'s existing pattern) — do this after Rule 10, since two of the queries in scope are moving out of view components as part of that fix anyway.
-6. **Rule 7** (resolve the "Domain" naming collision, group `ViewComponents` by feature) — a rename/move, best done last since it touches the most file paths and should land on a clean diff.
+This list reflects `REMEDIATION_PLAN.md`'s phase order, which refined this order slightly (Phase 2 before Phase 3) based on a finer-grained complexity analysis — see that file for the authoritative sequencing and dependency notes.
+
+1. ✅ **Rule 11** (translate the Ukrainian comments in `AccountController.cs`, and `Dockerfile`, to English) — done in Phase 1, merged to `main`.
+2. ✅ **Rule 2 / 4** (add `IsEditable`/`CanWithdraw` to `ApplicationListItemViewModel`/`ApplicationWizardViewModel`, update the three view call sites) — done in Phase 2, on `refactor/phase-2-dedupe-status-checks` (uncommitted as of this update).
+3. **Rule 8** (move `ApplicationWizardViewModel`'s validation onto `DataAnnotations`, delete the manual checks from `ApplicationWizardService`) — contained to one view model + one service method, has existing test coverage to refactor against (per Rule 6). Not started.
+4. **Rule 10** (move `UnitListViewComponent`'s and `ApplicationSummaryViewComponent`'s queries into `IUnitService`/a neutral service) — closes the one data-access-boundary gap, which is also Rule 3's only open finding. Not started.
+5. **Rule 9** (project the five listed read paths straight to their ViewModels in the service query, following `UnitListViewComponent`'s existing pattern) — do this after Rule 2 (done) and after Rule 10, since the `GetMyApplicationsAsync` projection needs the `IsEditable`/`CanWithdraw` fields that now exist, and two of the queries in scope are moving out of view components as part of the Rule 10 fix anyway. Not started.
+6. **Rule 7** (resolve the "Domain" naming collision, group `ViewComponents` by feature) — a rename/move, best done last since it touches the most file paths and should land on a clean diff. Not started.
