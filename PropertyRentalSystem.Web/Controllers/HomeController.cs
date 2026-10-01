@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PropertyRentalSystem.Web.Models;
+using PropertyRentalSystem.Web.ViewModels.Shared;
 
 namespace PropertyRentalSystem.Web.Controllers;
 

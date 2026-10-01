@@ -1,4 +1,4 @@
-namespace PropertyRentalSystem.Web.Models;
+namespace PropertyRentalSystem.Web.ViewModels.Shared;
 
 public class ErrorViewModel
 {
