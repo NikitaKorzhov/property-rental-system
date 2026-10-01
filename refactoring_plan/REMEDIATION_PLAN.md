@@ -1,5 +1,7 @@
 # Remediation Plan
 
+**✅ Complete.** All 6 phases below have been executed and merged to `main` — see [`REMEDIATION_STATUS.md`](REMEDIATION_STATUS.md) for what actually happened in each (including a few deviations from this plan, found during execution) and [`RULES_COMPLIANCE_AUDIT.md`](RULES_COMPLIANCE_AUDIT.md) for the current, fully-compliant state of every rule. This file is kept as the original plan for historical reference — it describes the codebase *as it was before* execution, not its current state.
+
 A concrete plan to close the gaps found in [`RULES_COMPLIANCE_AUDIT.md`](RULES_COMPLIANCE_AUDIT.md) against [`ARCHITECTURE_RULES.md`](ARCHITECTURE_RULES.md). Phases are ordered **from simplest to most complex** — each phase is small enough to execute, test, and merge on its own, per the Strangler-Fig approach in Rule 6 (write/verify tests → extract → confirm green → move on). Dependencies between phases are called out explicitly where they exist; phases with no dependency note can be done in any relative order (including in parallel by different people).
 
 Rules 1, 5, 6, and 12 need no dedicated phase (already compliant — see `RULES_COMPLIANCE_AUDIT.md` §12 for Rule 12's one minor note, folded into Phase 3 below) — they aren't phases of their own.

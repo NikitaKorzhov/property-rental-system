@@ -45,7 +45,7 @@ Every `return View(...)` / `return PartialView(...)` across all controllers pass
 
 ## 6. Safe Refactoring Strategy — ➖ Not applicable to a static snapshot
 
-This rule describes a *process* for making future changes, not a property the current code either satisfies or violates on its own. The one relevant fact: the existing 99 tests in `PropertyRentalSystem.Tests` (`Domain/Rules`, `Services`, `ViewModels`) already give the "write/verify tests first" step of this rule something real to build on — keep that coverage current as the fixes below are applied, including adding tests for any `IsEditable`/`CanWithdraw` ViewModel flags introduced to resolve Rule 2/4.
+This rule describes a *process* for making future changes, not a property the current code either satisfies or violates on its own. The one relevant fact: the 108 tests in `PropertyRentalSystem.Tests` (`BusinessRules`, `Services`, `ViewModels`) give the "write/verify tests first" step of this rule something real to build on for any future change — and in practice, every phase of `REMEDIATION_PLAN.md` followed exactly this process (see `REMEDIATION_STATUS.md` for how each phase verified before committing).
 
 ## 7. Folder / Module Boundaries — ✅ Fixed (Phase 6)
 

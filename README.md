@@ -61,7 +61,7 @@ A full-stack web application built with ASP.NET Core MVC for property management
 6. **Layered Architecture:**
     - Controllers stay thin: they translate HTTP/`ModelState` concerns into calls on a service and translate the result back into a view or a redirect. No EF Core or business logic lives in a controller.
     - The **Services** layer (`Services/Properties`, `Services/Units`, `Services/Applications`, `Services/Review`) owns orchestration that touches the database — loading entities, invoking domain rules, and persisting changes — and reports outcomes through a shared `ServiceResult` / `ServiceResult<T>` type (a success flag plus field-scoped errors), kept deliberately decoupled from `ModelState` and MVC.
-    - The **Domain/Rules** layer (`Domain/Rules`) holds pure, DB-free static rule classes (`LeaseRules`, `UnitTypeRules`, `RentalApplicationRules`) that services call into — these are what the business-logic unit tests target directly.
+    - The **BusinessRules** layer (`BusinessRules/`) holds pure, DB-free static rule classes (`LeaseRules`, `UnitTypeRules`, `RentalApplicationRules`) that services call into — these are what the business-logic unit tests target directly.
 
 ---
 
@@ -73,22 +73,23 @@ PropertyRentalSystem/
 ├── PropertyRentalSystem.Web/
 │   ├── Controllers/                   # Properties, Units, Applications, ApplicationReview, Account, Home
 │   │                                  #   — HTTP/ViewModel glue only, no EF Core or business logic
-│   ├── Domain/Rules/                  # Pure, DB-free, unit-tested business rules (lease availability,
+│   ├── BusinessRules/                 # Pure, DB-free, unit-tested business rules (lease availability,
 │   │                                  #   unit-type assignment, application status/editability rules)
 │   ├── Services/                      # DB-backed orchestration, grouped by feature, one interface + one
 │   │   ├── Properties/                #   implementation per folder; all return ServiceResult/ServiceResult<T>
-│   │   ├── Units/
-│   │   ├── Applications/              #   ApplicationBrowseService, ApplicationWizardService, ResidenceHistoryService
+│   │   ├── Units/                     #   and project list/summary reads straight to their ViewModel
+│   │   ├── Applications/              #   ApplicationBrowseService, ApplicationWizardService,
+│   │   │                              #   ApplicationSummaryService, ResidenceHistoryService
 │   │   ├── Review/                    #   ApplicationReviewService
 │   │   └── ServiceResult.cs           #   shared success/field-scoped-error result type
 │   ├── Data/                          # ApplicationDbContext, EF Core migrations, Bogus-based DbInitializer
-│   ├── Models/Domain/                 # Domain entities (Property, Unit, RentalApplication, Lease, etc.)
-│   ├── ViewComponents/                # UnitList, ApplicationSummary
-│   ├── ViewModels/                    # Per-feature view models (Account, Properties, Units, Applications, Review)
+│   ├── Models/                        # Entities (Property, Unit, RentalApplication, Lease, etc.) — mirrors ViewModels/
+│   ├── ViewComponents/                # UnitList (Units/), ApplicationSummary (Applications/) — grouped by feature
+│   ├── ViewModels/                    # Per-feature view models (Account, Properties, Units, Applications, Review, Shared)
 │   └── Views/                         # Razor views and partials, incl. Views/Shared/Components for view components
 │
-├── PropertyRentalSystem.Tests/        # xUnit test project (99 tests)
-│   ├── Domain/Rules/                  # Tests for the pure business rules above
+├── PropertyRentalSystem.Tests/        # xUnit test project (108 tests)
+│   ├── BusinessRules/                 # Tests for the pure business rules above
 │   ├── Services/                      # Boundary tests for each service, against EF Core InMemory
 │   │   ├── Properties/
 │   │   ├── Units/
@@ -99,6 +100,8 @@ PropertyRentalSystem/
 │
 └── PropertyRentalSystem.sln
 ```
+
+This structure is the result of a completed architecture cleanup — see [`refactoring_plan/`](refactoring_plan/) for the rules it follows (`ARCHITECTURE_RULES.md`) and the audit confirming compliance (`RULES_COMPLIANCE_AUDIT.md`).
 
 ---
 
@@ -202,8 +205,8 @@ You can also register a new account from the sign-up page and pick either role.
 dotnet test
 ```
 
-99 tests across three layers:
-- **`Domain/Rules`** — the pure business rules that live outside the controllers/services (lease-availability dates, the inactive-unit-type assignment rule, application status/editability rules).
+108 tests across three layers:
+- **`BusinessRules`** — the pure business rules that live outside the controllers/services (lease-availability dates, the inactive-unit-type assignment rule, application status/editability rules).
 - **`Services`** — boundary tests for every service (`Properties`, `Units`, `Applications`, `Review`) against the EF Core InMemory provider: filtering, ownership/editability checks, the lease-creation-on-approval flow (including the "unit already has an active lease" rejection), wizard step transitions, and status-history recording.
 - **`ViewModels`** — cross-field validation on the residence-history and review-decision forms.
 
