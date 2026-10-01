@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PropertyRentalSystem.Web.Data;
 using PropertyRentalSystem.Web.Domain.Rules;
 using PropertyRentalSystem.Web.Models.Domain;
+using PropertyRentalSystem.Web.ViewModels.Units;
 
 namespace PropertyRentalSystem.Web.Services.Units;
 
@@ -18,6 +19,22 @@ public class UnitService : IUnitService
 
     public async Task<bool> PropertyExistsAsync(int propertyId) =>
         await _db.Properties.AnyAsync(p => p.Id == propertyId);
+
+    public async Task<List<UnitListItemViewModel>> GetUnitsForPropertyAsync(int propertyId) =>
+        await _db.Units
+            .Where(u => u.PropertyId == propertyId)
+            .Include(u => u.UnitType)
+            .OrderBy(u => u.UnitNumber)
+            .Select(u => new UnitListItemViewModel
+            {
+                Id = u.Id,
+                UnitNumber = u.UnitNumber,
+                Bedrooms = u.Bedrooms,
+                MonthlyRent = u.MonthlyRent,
+                UnitTypeName = u.UnitType.Name,
+                UnitTypeIsActive = u.UnitType.IsActive
+            })
+            .ToListAsync();
 
     public async Task<List<UnitType>> GetSelectableUnitTypesAsync(int? currentUnitTypeId) =>
         await _db.UnitTypes
