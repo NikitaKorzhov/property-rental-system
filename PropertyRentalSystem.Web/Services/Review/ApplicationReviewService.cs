@@ -64,32 +64,47 @@ public class ApplicationReviewService : IApplicationReviewService
         if (application.Status != ApplicationStatus.Submitted)
             return ServiceResult.Fail("This application can no longer be reviewed.");
 
-        if (outcome == ReviewOutcome.Approve)
+        switch (outcome)
         {
-            var today = DateTime.UtcNow.Date;
-            var unitLeases = await _db.Leases.Where(l => l.UnitId == application.UnitId).ToListAsync();
-            if (unitLeases.Any(l => LeaseRules.CoversDate(l.StartDate, l.EndDate, today)))
+            case ReviewOutcome.Approve:
             {
-                // The approval check prevents a second lease. Other open applications for
-                // this unit are left as they are — only this one is rejected.
-                return ServiceResult.Fail("This unit already has an active lease. Approval is blocked to prevent a second lease.");
+                var today = DateTime.UtcNow.Date;
+                var hasActiveLease = await _db.Leases
+                    .Where(l => l.UnitId == application.UnitId)
+                    .AnyAsync(LeaseRules.IsActiveOn(today));
+                if (hasActiveLease)
+                {
+                    // The approval check prevents a second lease. Other open applications for
+                    // this unit are left as they are — only this one is rejected.
+                    return ServiceResult.Fail("This unit already has an active lease. Approval is blocked to prevent a second lease.");
+                }
+
+                application.Status = ApplicationStatus.Approved;
+                application.Lease = new Lease
+                {
+                    UnitId = application.UnitId,
+                    StartDate = today,
+                    EndDate = LeaseRules.ComputeEndDate(today)
+                };
+                break;
             }
 
-            application.Status = ApplicationStatus.Approved;
-            application.Lease = new Lease
+            case ReviewOutcome.Return:
             {
-                UnitId = application.UnitId,
-                StartDate = today,
-                EndDate = LeaseRules.ComputeEndDate(today)
-            };
-        }
-        else if (outcome == ReviewOutcome.Return)
-        {
-            application.Status = ApplicationStatus.Returned;
-        }
-        else
-        {
-            application.Status = ApplicationStatus.Denied;
+                application.Status = ApplicationStatus.Returned;
+                break;
+            }
+
+            case ReviewOutcome.Deny:
+            {
+                application.Status = ApplicationStatus.Denied;
+                break;
+            }
+
+            default:
+            {
+                throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null);
+            }
         }
 
         _db.ApplicationStatusHistories.Add(new ApplicationStatusHistory

@@ -1,4 +1,5 @@
 using PropertyRentalSystem.Web.BusinessRules;
+using PropertyRentalSystem.Web.Models;
 
 namespace PropertyRentalSystem.Tests.BusinessRules;
 
@@ -63,5 +64,24 @@ public class LeaseRulesTests
 
         // The unit must be available again exactly on the anniversary, not one day late.
         Assert.False(LeaseRules.CoversDate(start, end, oneYearLater));
+    }
+
+    [Theory]
+    [InlineData(-10, 10, true)]    // within range
+    [InlineData(1, 365, false)]    // starts in the future
+    [InlineData(-400, -1, false)]  // already ended
+    [InlineData(0, 365, true)]     // starts today (inclusive)
+    [InlineData(-365, 0, true)]    // ends today (inclusive)
+    public void IsActiveOn_AgreesWithCoversDate(int startOffsetDays, int endOffsetDays, bool expected)
+    {
+        var start = Today.AddDays(startOffsetDays);
+        var end = Today.AddDays(endOffsetDays);
+        var lease = new Lease { StartDate = start, EndDate = end };
+
+        var viaCoversDate = LeaseRules.CoversDate(start, end, Today);
+        var viaIsActiveOn = LeaseRules.IsActiveOn(Today).Compile()(lease);
+
+        Assert.Equal(expected, viaCoversDate);
+        Assert.Equal(viaCoversDate, viaIsActiveOn);
     }
 }
